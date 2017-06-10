@@ -57,9 +57,21 @@ public class TweetProcessing {
 		processedText=processedText.replaceAll("  *", " ");
 		//Rimuove gli spazi all'inizio del testo
 		processedText=processedText.replaceAll("^ ", "");
+		//Rimuove termini indesiderati
+		processedText=removeStopWords(processedText);
 	}
 	
+	//TODO implementare metodo che rimuove le stopwords dal testo del tweet
+	private String removeStopWords(String text) {
+		
+		return null;
+	}
 	
+	//TODO implementare metodo che debba essere chiamato una sola volta (all'inizio del main) e che carichi la lista delle stopwords
+	public static void loadStopWords(String file){
+		
+	}
+
 	public static String removeAccents(String text) {
 	    return text == null ? null :
 	        Normalizer.normalize(text, Form.NFD)
