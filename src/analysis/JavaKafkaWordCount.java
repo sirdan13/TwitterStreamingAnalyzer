@@ -24,17 +24,19 @@ import java.util.HashMap;
 import java.util.regex.Pattern;
 
 import scala.Tuple2;
-
 import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.examples.streaming.StreamingExamples;
 import org.apache.spark.streaming.Duration;
+import org.apache.spark.streaming.Durations;
+import org.apache.spark.streaming.Time;
 import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaPairDStream;
-import org.apache.spark.streaming.api.java.JavaPairReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka.KafkaUtils;
 
@@ -92,8 +94,13 @@ public final class JavaKafkaWordCount {
      */
 
     JavaPairDStream<String, String> messages =  KafkaUtils.createStream(jssc, args[0], args[1], topicMap);
-    System.out.println(jssc.getState());
-    System.out.println("111111111");
+    
+    
+    Function2<Integer, Integer, Integer> reduceFunc = new Function2<Integer, Integer, Integer>() {
+  	  @Override public Integer call(Integer i1, Integer i2) throws Exception {
+  	    return i1 + i2;
+  	  }
+  	};
 
     /*
      * Leggo i messaggi in entrata, inserendoli in una JavaDStream contenente Stringhe
@@ -116,6 +123,9 @@ public final class JavaKafkaWordCount {
       }
     });
     
+  //  JavaRDD<String> pWords = words.compute(new Time(5000));
+    
+    
     /*
      * Crea una JavaPair che conti le parole, prima creando una mapToPair con le parole (ridondanti) e la costante intera 1
      * Poi riduce con una reduceByKey in modo da accorpare le parole ridondanti e sommare il numero di occorrenze
@@ -127,23 +137,35 @@ public final class JavaKafkaWordCount {
         public Tuple2<String, Integer> call(String s) {
           return new Tuple2<>(s, 1);
         }
-      }).reduceByKey(new Function2<Integer, Integer, Integer>() {
+      });
+    
+    JavaPairDStream<String, Integer> windowedWordCounts = wordCounts.reduceByKeyAndWindow(reduceFunc, Durations.seconds(30), Durations.seconds(10));
+    		
+    /*		
+    		.reduceByKey(new Function2<Integer, Integer, Integer>() {
         @Override
         public Integer call(Integer i1, Integer i2) {
           return i1 + i2;
         }
       });
+    */
+    
+ //   JavaPairRDD<String, Integer> rt = wordCounts.mapToPair(f);
     
  
     System.out.println(jssc.getState());
     /*
      * A questo punto stampo il risultato
      */
-    System.out.println("2222222222");
- //   wordCounts.print();
-    System.out.println("333333333333");
+   
+ //  wordCounts.print();
+    
+    windowedWordCounts.print();
+ //   JavaPairRDD<Integer, String> frequenze = Analytics.countHashtag(pWords);
+
+ // frequenze.foreach(x->{System.out.println("Parola: "+x._2+"\t Citazioni: "+x._1);});
     jssc.start();
-    System.out.println(jssc.getState());
     jssc.awaitTermination();
   }
+
 }
