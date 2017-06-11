@@ -129,19 +129,24 @@ public class TwitterProducer {
 				Thread.sleep(100);
 				// i++;
 			} else {
-				Tweet t = new Tweet (ret.getId(), ret.getText(), ret.getCreatedAt(), ret.isRetweet(), ret.getHashtagEntities(), ret.getUser());
-		//		producer.send(new ProducerRecord<String, String>(topicName, Integer.toString(j++), t.getText()));
+				Tweet t;
+				if(!ret.isRetweet()){
+					t = new Tweet (ret.getId(), ret.getText(), ret.getCreatedAt(), ret.isRetweet(), ret.getHashtagEntities(), ret.getUser());
+				}
+				else{
+					t = new Tweet (ret.getId(), ret.getText(), ret.getCreatedAt(), ret.isRetweet(), ret.getRetweetedStatus().getText(), ret.getHashtagEntities(), ret.getUser());
+				}
 				//Invia i dati al topic "original-text"
 				producer.send(new ProducerRecord<String, String>("original-text", Integer.toString(j), t.getText()));
 				//Invia i dati al topic "original-text"
 				producer.send(new ProducerRecord<String, String>("processed-text", Integer.toString(j), t.getProcessedText()));
 				//Invia i dati al topic "hashtags"
 				for(HashtagEntity ht : ret.getHashtagEntities())
-					producer.send(new ProducerRecord<String, String>("hashtags", Integer.toString(i++), ht.getText()));
+					producer.send(new ProducerRecord<String, String>("hashtags", Integer.toString(i++), ht.getText().toLowerCase()));
 				//Invia i dati al topic "mentions"
 				if(ret.getUserMentionEntities().length>0)
 					for(UserMentionEntity ue : ret.getUserMentionEntities())
-						producer.send(new ProducerRecord<String, String>("mentions", Integer.toString(k++), ue.getName()));
+						producer.send(new ProducerRecord<String, String>("mentions2", Integer.toString(k++), ue.getScreenName()));
 				tlist.add(t);
 				j++;
 			}
@@ -211,10 +216,7 @@ public class TwitterProducer {
 			 System.out.println(); 
 			 stampato=true;
 		 }
-			
-	//	 producer.close();
-		// Thread.sleep(500);
-		// twitterStream.shutdown();
+
 	}
 
 }

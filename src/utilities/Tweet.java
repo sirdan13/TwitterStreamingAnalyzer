@@ -4,15 +4,8 @@ import java.text.Normalizer.Form;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-
 import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.Function2;
-
 import analysis.Analytics;
 import scala.Serializable;
 import twitter4j.HashtagEntity;
@@ -24,7 +17,9 @@ public class Tweet implements Serializable {
 	private String text;
 	private Date created_at;
 	private boolean isRetweet;
-	private transient HashtagEntity [] hashtags;
+	//Se un tweet è retweet, allora salveremo anche il testo del tweet originario
+	private String originalTweetText;
+	private HashtagEntity [] hashtags;
 	private List<String> hashtagsList;
 	private User user;
 	
@@ -40,6 +35,22 @@ public class Tweet implements Serializable {
 		this.text = text;
 		this.created_at = created_at;
 		this.isRetweet = retweet;
+		this.hashtags = hashtags;
+		this.user = user;
+		hashtagsList = new ArrayList<String>();
+		for(HashtagEntity h : hashtags)
+			hashtagsList.add(h.getText().toLowerCase());
+		processText();
+	}
+	
+	
+	public Tweet(long tweet_id, String text, Date created_at, boolean retweet, String originalTweetText, HashtagEntity[] hashtags, User user) {
+		super();
+		this.tweet_id = tweet_id;
+		this.text = text;
+		this.created_at = created_at;
+		this.isRetweet = retweet;
+		this.originalTweetText=originalTweetText;
 		this.hashtags = hashtags;
 		this.user = user;
 		hashtagsList = new ArrayList<String>();
@@ -162,6 +173,14 @@ public class Tweet implements Serializable {
 
 	public void setProcessedText(String processedText) {
 		this.processedText = processedText;
+	}
+
+	public String getOriginalTweetText() {
+		return originalTweetText;
+	}
+
+	public void setOriginalTweetText(String originalTweetText) {
+		this.originalTweetText = originalTweetText;
 	}
 
 	
