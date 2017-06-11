@@ -82,6 +82,8 @@ public class TwitterProducer {
 			}
 		};
 		twitterStream.addListener(listener);
+	//	System.setProperty("file.encoding", "UTF8");
+		System.out.println(System.getProperty("file.encoding"));
 
 
 		FilterQuery query = new FilterQuery().track(keyWords);
@@ -139,8 +141,8 @@ public class TwitterProducer {
 		//		producer.send(new ProducerRecord<String, String>(topicName, Integer.toString(j++), t.getText()));
 				producer.send(new ProducerRecord<String, String>(topicName, Integer.toString(j++), t.getProcessedText()));
 				tlist.add(t);
-				if(t.isRetweet())
-					System.out.println(t.getProcessedText());
+				System.out.println(t.getProcessedText());
+
 			}
 			
 		 long timeY = System.currentTimeMillis();

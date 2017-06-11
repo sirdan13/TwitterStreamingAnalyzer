@@ -48,7 +48,7 @@ public class Tweet implements Serializable {
 		//Rimuove i ritorni a capo 
 		processedText=processedText.replaceAll("(\\r|\\n)", "");
 		//Rimuove i link
-		//processedText=processedText.replaceAll("https?://[^ ]*", "");
+		processedText=processedText.replaceAll("https?://[^ ]*", "");
 		//Rimuove gli accenti
 		processedText = removeAccents(processedText);
 		//Tutto minuscolo
@@ -57,6 +57,8 @@ public class Tweet implements Serializable {
 		processedText=processedText.replaceAll("[^a-zA-Z0-9#@]", " ");
 		//Separa l'hashtag dalla parola precedente
 		processedText=processedText.replaceAll("#", " #");
+		//Separa la menzione dalla parola precedente
+		processedText=processedText.replaceAll("@", " @");
 		//Rimuove gli spazi extra
 		processedText=processedText.replaceAll("  *", " ");
 		//Rimuove gli spazi all'inizio del testo

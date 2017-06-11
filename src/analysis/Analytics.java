@@ -8,17 +8,17 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFunction;
-import org.apache.spark.streaming.api.java.JavaDStream;
-
 import scala.Tuple2;
 import utilities.Tweet;
 
 public class Analytics {
 
 	private static JavaSparkContext jsc;
+	private static JavaRDD<String> stopWords;
+	
+	
 	
 	public Analytics(JavaSparkContext jsc){
 		Analytics.jsc=jsc;
@@ -32,6 +32,7 @@ public class Analytics {
 		conf.setAppName("Twitter Streaming");
 		conf.setMaster("local[*]");
 		jsc = new JavaSparkContext(conf); 
+		setStop("config/stopwords.txt");
 
 	}
 	
@@ -80,6 +81,16 @@ public static JavaPairRDD<Integer, String> countHashtag(JavaRDD<String> words) {
 		return output;
 	*/
 	}
+
+public static JavaRDD<String> getStop() {
+	return stopWords;
+}
+
+public static void setStop(String file) {
+	
+	Analytics.stopWords=jsc.textFile(file).distinct();
+
+}
 	
 	
 
