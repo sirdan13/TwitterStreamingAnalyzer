@@ -137,9 +137,21 @@ public final class JavaKafkaWordCount {
         public Tuple2<String, Integer> call(String s) {
           return new Tuple2<>(s, 1);
         }
-      });
+      }).reduceByKey(reduceFunc);
     
-    JavaPairDStream<String, Integer> windowedWordCounts = wordCounts.reduceByKeyAndWindow(reduceFunc, Durations.seconds(30), Durations.seconds(10));
+    JavaPairDStream<Integer,String> swappedPair = wordCounts.mapToPair(x -> x.swap());
+    
+    JavaPairDStream<Integer,String> sortedStream = swappedPair.transformToPair(
+    	     new Function<JavaPairRDD<Integer,String>, JavaPairRDD<Integer,String>>() {
+    	         @Override
+    	         public JavaPairRDD<Integer,String> call(JavaPairRDD<Integer,String> jPairRDD) throws Exception {
+    	                    return jPairRDD.sortByKey(false);
+    	                  }
+    	              });
+
+    	
+    
+  //  JavaPairDStream<String, Integer> windowedWordCounts = wordCounts.reduceByKeyAndWindow(reduceFunc, Durations.seconds(30), Durations.seconds(10));
     		
     /*		
     		.reduceByKey(new Function2<Integer, Integer, Integer>() {
@@ -159,8 +171,8 @@ public final class JavaKafkaWordCount {
      */
    
  //  wordCounts.print();
-    
-    windowedWordCounts.print();
+    sortedStream.print();
+ //   windowedWordCounts.print();
  //   JavaPairRDD<Integer, String> frequenze = Analytics.countHashtag(pWords);
 
  // frequenze.foreach(x->{System.out.println("Parola: "+x._2+"\t Citazioni: "+x._1);});

@@ -1,4 +1,6 @@
 package utilities;
+import java.text.Normalizer;
+import java.text.Normalizer.Form;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -11,10 +13,12 @@ public class Tweet implements Serializable {
 	private long tweet_id;
 	private String text;
 	private Date created_at;
-	private boolean retweet;
+	private boolean isRetweet;
 	private transient HashtagEntity [] hashtags;
 	private List<String> hashtagsList;
 	private User user;
+	
+	private String processedText;
 	
 	public Tweet(){
 		
@@ -25,13 +29,55 @@ public class Tweet implements Serializable {
 		this.tweet_id = tweet_id;
 		this.text = text;
 		this.created_at = created_at;
-		this.retweet = retweet;
+		this.isRetweet = retweet;
 		this.hashtags = hashtags;
 		this.user = user;
 		hashtagsList = new ArrayList<String>();
 		for(HashtagEntity h : hashtags)
 			hashtagsList.add(h.getText().toLowerCase());
+		processText();
 	}
+	
+	
+	public void processText(){
+		//Rimuove il termine "RT" che indica il retweet
+		if(isRetweet())
+			processedText = text.substring(3);
+		else
+			processedText=text;
+		//Rimuove i ritorni a capo 
+		processedText=processedText.replaceAll("(\\r|\\n)", "");
+		//Rimuove i link
+		//processedText=processedText.replaceAll("https?://[^ ]*", "");
+		//Rimuove gli accenti
+		processedText = removeAccents(processedText);
+		//Tutto minuscolo
+		processedText=processedText.toLowerCase();
+		//Rimuove caratteri non alfanumerici (# e @ escluso)
+		processedText=processedText.replaceAll("[^a-zA-Z0-9#@]", " ");
+		//Separa l'hashtag dalla parola precedente
+		processedText=processedText.replaceAll("#", " #");
+		//Rimuove gli spazi extra
+		processedText=processedText.replaceAll("  *", " ");
+		//Rimuove gli spazi all'inizio del testo
+		processedText=processedText.replaceAll("^ ", "");
+		//Rimuove termini indesiderati
+	//	processedText=removeStopWords(processedText);
+	}
+	
+	//TODO implementare metodo che rimuove le stopwords dal testo del tweet
+		private String removeStopWords(String text) {
+			
+			return null;
+		}
+		
+		public static String removeAccents(String text) {
+		    return text == null ? null :
+		        Normalizer.normalize(text, Form.NFD)
+		            .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+		}
+	
+	
 
 	public long getTweet_id() {
 		return tweet_id;
@@ -58,11 +104,11 @@ public class Tweet implements Serializable {
 	}
 
 	public boolean isRetweet() {
-		return retweet;
+		return isRetweet;
 	}
 
 	public void setRetweet(boolean retweet) {
-		this.retweet = retweet;
+		this.isRetweet = retweet;
 	}
 
 	public HashtagEntity[] getHashtags() {
@@ -87,6 +133,14 @@ public class Tweet implements Serializable {
 
 	public void setUser(User user) {
 		this.user = user;
+	}
+	
+	public String getProcessedText() {
+		return processedText;
+	}
+
+	public void setProcessedText(String processedText) {
+		this.processedText = processedText;
 	}
 
 	

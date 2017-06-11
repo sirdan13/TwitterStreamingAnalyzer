@@ -136,8 +136,11 @@ public class TwitterProducer {
 				// i++;
 			} else {
 				Tweet t = new Tweet (ret.getId(), ret.getText(), ret.getCreatedAt(), ret.isRetweet(), ret.getHashtagEntities(), ret.getUser());
+		//		producer.send(new ProducerRecord<String, String>(topicName, Integer.toString(j++), t.getText()));
+				producer.send(new ProducerRecord<String, String>(topicName, Integer.toString(j++), t.getProcessedText()));
 				tlist.add(t);
-				producer.send(new ProducerRecord<String, String>(topicName, Integer.toString(j++), t.getText()));
+				if(t.isRetweet())
+					System.out.println(t.getProcessedText());
 			}
 			
 		 long timeY = System.currentTimeMillis();
@@ -249,5 +252,10 @@ public class TwitterProducer {
 	    long tmp = Math.round(value);
 	    return (double) tmp / factor;
 	}
+	
+	//TODO implementare metodo che debba essere chiamato una sola volta (all'inizio del main) e che carichi la lista delle stopwords
+		public static void loadStopWords(String file){
+			
+		}
 	
 }
