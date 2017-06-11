@@ -113,7 +113,7 @@ public final class JavaKafkaWordCount {
     });
     
     /*
-     * Estraggo dai messaggi le singole parole, sfruttando la funzione definita all'interno della flatMap
+     * Estraggo dai messaggi le singole parole, sfruttando la funzione definita all'interno del metodo flatMap
      */
 
     JavaDStream<String> words = lines.flatMap(new FlatMapFunction<String, String>() {

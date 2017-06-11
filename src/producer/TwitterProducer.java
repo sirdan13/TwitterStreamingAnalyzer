@@ -87,7 +87,6 @@ public class TwitterProducer {
 
 
 		FilterQuery query = new FilterQuery().track(keyWords);
-
 	//	query.language("it");
 		query.language("it", "en");
 		twitterStream.filter(query);
@@ -109,16 +108,10 @@ public class TwitterProducer {
 	//	props.put("value.serializer", "utilities.TweetSerializer");
 
 		Producer<String, String> producer = new KafkaProducer<String, String>(props);
-	//	int i = 0;
+		int i = 0;
 		int j = 0;
+		int k = 0;
 
-		/*
-		 * Problema con l'encoding del file?
-		 */
-	//	System.out.println(System.getProperty("file.encoding"));
-	//	System.setProperty("file.encoding", "UTF-8");
-	//	System.out.println(System.getProperty("file.encoding"));
-		 
 		Analytics.init();
 		 
 		List<Tweet> tlist = new ArrayList<Tweet>();
@@ -132,18 +125,27 @@ public class TwitterProducer {
 		int minTweets = 100000;
 		 while (true) {
 			Status ret = queue.poll();
-
 			if (ret == null) {
 				Thread.sleep(100);
 				// i++;
 			} else {
 				Tweet t = new Tweet (ret.getId(), ret.getText(), ret.getCreatedAt(), ret.isRetweet(), ret.getHashtagEntities(), ret.getUser());
 		//		producer.send(new ProducerRecord<String, String>(topicName, Integer.toString(j++), t.getText()));
-				producer.send(new ProducerRecord<String, String>(topicName, Integer.toString(j++), t.getProcessedText()));
+				//Invia i dati al topic "original-text"
+				producer.send(new ProducerRecord<String, String>("original-text", Integer.toString(j), t.getText()));
+				//Invia i dati al topic "original-text"
+				producer.send(new ProducerRecord<String, String>("processed-text", Integer.toString(j), t.getProcessedText()));
+				//Invia i dati al topic "hashtags"
+				for(HashtagEntity ht : ret.getHashtagEntities())
+					producer.send(new ProducerRecord<String, String>("hashtags", Integer.toString(i++), ht.getText()));
+				//Invia i dati al topic "mentions"
+				if(ret.getUserMentionEntities().length>0)
+					for(UserMentionEntity ue : ret.getUserMentionEntities())
+						producer.send(new ProducerRecord<String, String>("mentions", Integer.toString(k++), ue.getName()));
 				tlist.add(t);
-				System.out.println(t.getProcessedText());
-
+				j++;
 			}
+			
 			
 		 long timeY = System.currentTimeMillis();
 		 long updateTime = 20000;

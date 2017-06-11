@@ -2,8 +2,18 @@ package utilities;
 import java.text.Normalizer;
 import java.text.Normalizer.Form;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.Function2;
+
+import analysis.Analytics;
 import scala.Serializable;
 import twitter4j.HashtagEntity;
 import twitter4j.User;
@@ -64,13 +74,22 @@ public class Tweet implements Serializable {
 		//Rimuove gli spazi all'inizio del testo
 		processedText=processedText.replaceAll("^ ", "");
 		//Rimuove termini indesiderati
-	//	processedText=removeStopWords(processedText);
+		processedText=removeStopWords(processedText);
 	}
 	
-	//TODO implementare metodo che rimuove le stopwords dal testo del tweet
 		private String removeStopWords(String text) {
-			
-			return null;
+			/*
+			 * Converto il testo in un array splittando la stringa per gli spazi
+			 * converto l'array in lista
+			 * distribuisco la lista in una JavaRDD
+			 * filtro la JavaRDD verificando che le parole contenute non appartengano alla lista delle stopwords
+			 * alla fine nella JavaRDD rimarranno solo le parole ammesse
+			 */
+			JavaRDD<String> pText = Analytics.getJsc().parallelize(Arrays.asList(text.split(" "))).filter((x)->!Analytics.getStopWordsSet().contains(x));
+			String output = "";
+			for(String s : pText.collect())
+				output+=s+" ";
+			return output;
 		}
 		
 		public static String removeAccents(String text) {

@@ -1,6 +1,8 @@
 package analysis;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -17,7 +19,7 @@ public class Analytics {
 
 	private static JavaSparkContext jsc;
 	private static JavaRDD<String> stopWords;
-	
+	private static Set<String> stopWordsSet;
 	
 	
 	public Analytics(JavaSparkContext jsc){
@@ -32,7 +34,8 @@ public class Analytics {
 		conf.setAppName("Twitter Streaming");
 		conf.setMaster("local[*]");
 		jsc = new JavaSparkContext(conf); 
-		setStop("config/stopwords.txt");
+		setStopWords("config/stopwords.txt");
+		setStopWordsSet(new HashSet<String>(Analytics.getStopWords().collect()));
 
 	}
 	
@@ -52,12 +55,7 @@ public static JavaPairRDD<Integer, String> countHashtag(JavaRDD<String> words) {
 		
 //		JavaRDD<String> pTweet = lines.compute(lines);
 	
-	JavaPairRDD<String, Integer> wordCount = words.mapToPair(new PairFunction<String, String, Integer>() {
-        @Override
-        public Tuple2<String, Integer> call(String s) {
-          return new Tuple2<>(s, 1);
-        }
-      }).reduceByKey(new Function2<Integer, Integer, Integer>() {
+	JavaPairRDD<String, Integer> wordCount = words.mapToPair((x)->new Tuple2<String, Integer>(x, 1)).reduceByKey(new Function2<Integer, Integer, Integer>() {
         @Override
         public Integer call(Integer arg0, Integer arg1) {
           return arg0+arg1;
@@ -82,14 +80,30 @@ public static JavaPairRDD<Integer, String> countHashtag(JavaRDD<String> words) {
 	*/
 	}
 
-public static JavaRDD<String> getStop() {
+public static JavaRDD<String> getStopWords() {
 	return stopWords;
 }
 
-public static void setStop(String file) {
+public static void setStopWords(String file) {
 	
 	Analytics.stopWords=jsc.textFile(file).distinct();
 
+}
+
+public static JavaSparkContext getJsc() {
+	return jsc;
+}
+
+public static void setJsc(JavaSparkContext jsc) {
+	Analytics.jsc = jsc;
+}
+
+public static Set<String> getStopWordsSet() {
+	return stopWordsSet;
+}
+
+public static void setStopWordsSet(Set<String> stopWordsSet) {
+	Analytics.stopWordsSet = stopWordsSet;
 }
 	
 	
