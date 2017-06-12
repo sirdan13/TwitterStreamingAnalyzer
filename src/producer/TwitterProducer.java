@@ -33,7 +33,6 @@ public class TwitterProducer {
 		final LinkedBlockingQueue<Status> queue = new LinkedBlockingQueue<Status>(1000);
 
 		long tempoInizioRun = System.currentTimeMillis();
-		String topicName = readTopic("config/topic.txt");
 		String [] arguments = readTwitterAuth("config/credenziali_twitter.txt");
 		String [] keyWords = readKeywords("config/keywords.txt");
 		
@@ -146,7 +145,7 @@ public class TwitterProducer {
 				//Invia i dati al topic "mentions"
 				if(ret.getUserMentionEntities().length>0)
 					for(UserMentionEntity ue : ret.getUserMentionEntities())
-						producer.send(new ProducerRecord<String, String>("mentions", Integer.toString(k++), ue.getScreenName()));
+						producer.send(new ProducerRecord<String, String>("mentions4", Integer.toString(k++), ue.getScreenName()));
 				tlist.add(t);
 				j++;
 			}
