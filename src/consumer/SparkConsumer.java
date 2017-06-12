@@ -1,10 +1,8 @@
 package consumer;
 
 import java.awt.Color;
-import javax.swing.plaf.metal.MetalLookAndFeel;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Point;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Map;
@@ -30,7 +28,6 @@ import scala.Tuple2;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
-import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.SwingConstants;
@@ -115,8 +112,8 @@ public class SparkConsumer {
 	
 	private static String chooseTopic(){
 		 String [] options = {"hashtags", "mentions", "original-text", "processed-text"};
-		 UIManager.put("OptionPane.background",new ColorUIResource(255,255,204));
-		 UIManager.put("Panel.background",new ColorUIResource(255,255,204));
+		 UIManager.put("OptionPane.background",new ColorUIResource(214,227,249));
+		 UIManager.put("Panel.background",new ColorUIResource(214,227,249));
 		 UIManager.put("OptionPane.messageFont", "Verdana");
 		 UIManager.put("OptionPane.messageForeground", Color.green);
 		 Dimension size = UIManager.getDimension("OptionPane.minimumSize");
