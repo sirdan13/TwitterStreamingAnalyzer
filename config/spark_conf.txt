@@ -2,5 +2,5 @@ appName=SparkConsumer
 setMaster=local[*]
 zookeeper_server(s)=localhost:2181
 kafka_consumer_group=1
-thread(s)=1
+thread(s)=3
 duration=15000
