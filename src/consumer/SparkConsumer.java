@@ -4,11 +4,16 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.streaming.Duration;
@@ -56,13 +61,18 @@ public class SparkConsumer {
                  }
              };
            
-     static Function<Tuple2<String, String>, String> wordFunc = new Function<Tuple2<String, String>, String>(){
+     static FlatMapFunction<Tuple2<String, String>, String> wordFunc = new FlatMapFunction<Tuple2<String, String>, String>(){
     	 private static final long serialVersionUID = 1L;
 
  		@Override
-         public String call(Tuple2<String,String> x) throws Exception {
-                    return x._2;
-                  }
+         public Iterator<String> call(Tuple2<String,String> x) throws Exception {
+                    List<String> output = new ArrayList<String>();
+                    if(x._2.length()==0)
+                    	return output.iterator();
+                    for(String w : x._2().split(" "))
+                    	output.add(w);
+                    return output.iterator();
+                    }
 
 		
         };
@@ -136,8 +146,8 @@ public class SparkConsumer {
 
 	private static void analyzeProcessedText() throws InterruptedException {
 		messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
-		lines = messages.mapToPair((x)->(new Tuple2<String, Integer>(x._2, 1))).reduceByKey(sumFunc);
-		JavaPairDStream<Integer,String> sortedStream = lines.mapToPair(x->x.swap()).transformToPair(sortFunc);
+		JavaPairDStream<String, Integer> words = messages.flatMap(wordFunc).mapToPair((x)->(new Tuple2<String, Integer>(x, 1))).reduceByKey(sumFunc);
+		JavaPairDStream<Integer,String> sortedStream = words.mapToPair(x->x.swap()).transformToPair(sortFunc);
 		sortedStream.print();
 		jssc.start();
 		jssc.awaitTermination();
@@ -145,7 +155,7 @@ public class SparkConsumer {
 
 	private static void analyzeOriginalText() throws InterruptedException {
 		messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
-		JavaPairDStream<String, Integer> words = messages.map(wordFunc).mapToPair((x)->(new Tuple2<String, Integer>(x, 1))).reduceByKey(sumFunc);
+		JavaPairDStream<String, Integer> words = messages.flatMap(wordFunc).mapToPair((x)->(new Tuple2<String, Integer>(x, 1))).reduceByKey(sumFunc);
 		JavaPairDStream<Integer,String> sortedStream = words.mapToPair(x->x.swap()).transformToPair(sortFunc);
 		sortedStream.print();
 		jssc.start();

@@ -74,12 +74,8 @@ public class Tweet implements Serializable {
 		processedText = removeAccents(processedText);
 		//Tutto minuscolo
 		processedText=processedText.toLowerCase();
-		//Rimuove caratteri non alfanumerici (# e @ escluso)
-		processedText=processedText.replaceAll("[^a-zA-Z0-9#@]", " ");
-		//Separa l'hashtag dalla parola precedente
-		processedText=processedText.replaceAll("#", " #");
-		//Separa la menzione dalla parola precedente
-		processedText=processedText.replaceAll("@", " @");
+		//Rimuove caratteri non alfanumerici
+		processedText=processedText.replaceAll("[^a-zA-Z0-9]", " ");
 		//Rimuove gli spazi extra
 		processedText=processedText.replaceAll("  *", " ");
 		//Rimuove gli spazi all'inizio del testo
