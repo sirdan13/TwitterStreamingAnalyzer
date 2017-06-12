@@ -138,7 +138,7 @@ public class TwitterProducer {
 				}
 				//Invia i dati al topic "original-text"
 				producer.send(new ProducerRecord<String, String>("original-text", Integer.toString(j), t.getText()));
-				//Invia i dati al topic "original-text"
+				//Invia i dati al topic "processed-text"
 				producer.send(new ProducerRecord<String, String>("processed-text", Integer.toString(j), t.getProcessedText()));
 				//Invia i dati al topic "hashtags"
 				for(HashtagEntity ht : ret.getHashtagEntities())
@@ -146,7 +146,7 @@ public class TwitterProducer {
 				//Invia i dati al topic "mentions"
 				if(ret.getUserMentionEntities().length>0)
 					for(UserMentionEntity ue : ret.getUserMentionEntities())
-						producer.send(new ProducerRecord<String, String>("mentions2", Integer.toString(k++), ue.getScreenName()));
+						producer.send(new ProducerRecord<String, String>("mentions", Integer.toString(k++), ue.getScreenName()));
 				tlist.add(t);
 				j++;
 			}

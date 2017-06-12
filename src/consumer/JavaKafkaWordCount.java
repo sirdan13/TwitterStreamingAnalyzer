@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package analysis;
+package consumer;
 
 import java.util.Arrays;
 import java.util.Iterator;
