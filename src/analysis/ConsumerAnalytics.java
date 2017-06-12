@@ -47,13 +47,8 @@ public class ConsumerAnalytics {
 		ConsumerAnalytics.topics=topics;
 	}
 	
-	public static void init() {
-		conf = new SparkConf().setAppName(appName).setMaster(master);
-		jssc = new JavaStreamingContext(conf, new Duration(duration));
-		topics = new HashMap<String, Integer>();
-		topics.put(topic, Integer.parseInt(threads));
-		Logger.getLogger("org").setLevel(Level.ERROR);
-		Logger.getLogger("akka").setLevel(Level.ERROR);
+	public static void loadSentimentDictionaries() {
+		
 	}
 	
 	public void analyzeTopic(String topic) throws InterruptedException{

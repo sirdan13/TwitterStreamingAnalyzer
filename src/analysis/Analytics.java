@@ -20,8 +20,32 @@ public class Analytics {
 	private static JavaSparkContext jsc;
 	private static JavaRDD<String> stopWords;
 	private static Set<String> stopWordsSet;
+	private static JavaRDD<String> likeEN;
+	private static Set<String> likeENList;
+	private static JavaRDD<String> sadEN;
+	private static Set<String> sadENList;
+	private static JavaRDD<String> angryEN;
+	private static Set<String> angryENList;
+	private static JavaRDD<String> hilariousEN;
+	private static Set<String> hilariousENList;
+	private static JavaRDD<String> likeIT;
+	private static Set<String> likeITList;
+	private static JavaRDD<String> sadIT;
+	private static Set<String> sadITList;
+	private static JavaRDD<String> angryIT;
+	private static Set<String> angryITList;
+	private static JavaRDD<String> hilariousIT;
+	private static Set<String> hilariousITList;
+	
+
 	
 	
+	
+
+	public static void setStopWords(JavaRDD<String> stopWords) {
+		Analytics.stopWords = stopWords;
+	}
+
 	public Analytics(JavaSparkContext jsc){
 		Analytics.jsc=jsc;
 	}
@@ -36,6 +60,9 @@ public class Analytics {
 		jsc = new JavaSparkContext(conf); 
 		setStopWords("config/stopwords.txt");
 		setStopWordsSet(new HashSet<String>(Analytics.getStopWords().collect()));
+	//	setLikeEN("words/en/Love-Like-Wow.txt");
+	//	setStopWordsSet(new HashSet<String>(Analytics.getStopWords().collect()));
+		
 
 	}
 	
@@ -104,6 +131,135 @@ public static Set<String> getStopWordsSet() {
 
 public static void setStopWordsSet(Set<String> stopWordsSet) {
 	Analytics.stopWordsSet = stopWordsSet;
+}
+
+
+public static JavaRDD<String> getLikeEN() {
+	return likeEN;
+}
+
+public static void setLikeEN(JavaRDD<String> likeEN) {
+	Analytics.likeEN = likeEN;
+}
+
+public static Set<String> getLikeENList() {
+	return likeENList;
+}
+
+public static void setLikeENList(Set<String> likeENList) {
+	Analytics.likeENList = likeENList;
+}
+
+public static JavaRDD<String> getSadEN() {
+	return sadEN;
+}
+
+public static void setSadEN(JavaRDD<String> sadEN) {
+	Analytics.sadEN = sadEN;
+}
+
+public static Set<String> getSadENList() {
+	return sadENList;
+}
+
+public static void setSadENList(Set<String> sadENList) {
+	Analytics.sadENList = sadENList;
+}
+
+public static JavaRDD<String> getAngryEN() {
+	return angryEN;
+}
+
+public static void setAngryEN(JavaRDD<String> angryEN) {
+	Analytics.angryEN = angryEN;
+}
+
+public static Set<String> getAngryENList() {
+	return angryENList;
+}
+
+public static void setAngryENList(Set<String> angryENList) {
+	Analytics.angryENList = angryENList;
+}
+
+public static JavaRDD<String> getHilariousEN() {
+	return hilariousEN;
+}
+
+public static void setHilariousEN(JavaRDD<String> hilariousEN) {
+	Analytics.hilariousEN = hilariousEN;
+}
+
+public static Set<String> getHilariousENList() {
+	return hilariousENList;
+}
+
+public static void setHilariousENList(Set<String> hilariousENList) {
+	Analytics.hilariousENList = hilariousENList;
+}
+
+public static JavaRDD<String> getLikeIT() {
+	return likeIT;
+}
+
+public static void setLikeIT(JavaRDD<String> likeIT) {
+	Analytics.likeIT = likeIT;
+}
+
+public static Set<String> getLikeITList() {
+	return likeITList;
+}
+
+public static void setLikeITList(Set<String> likeITList) {
+	Analytics.likeITList = likeITList;
+}
+
+public static JavaRDD<String> getSadIT() {
+	return sadIT;
+}
+
+public static void setSadIT(JavaRDD<String> sadIT) {
+	Analytics.sadIT = sadIT;
+}
+
+public static Set<String> getSadITList() {
+	return sadITList;
+}
+
+public static void setSadITList(Set<String> sadITList) {
+	Analytics.sadITList = sadITList;
+}
+
+public static JavaRDD<String> getAngryIT() {
+	return angryIT;
+}
+
+public static void setAngryIT(JavaRDD<String> angryIT) {
+	Analytics.angryIT = angryIT;
+}
+
+public static Set<String> getAngryITList() {
+	return angryITList;
+}
+
+public static void setAngryITList(Set<String> angryITList) {
+	Analytics.angryITList = angryITList;
+}
+
+public static JavaRDD<String> getHilariousIT() {
+	return hilariousIT;
+}
+
+public static void setHilariousIT(JavaRDD<String> hilariousIT) {
+	Analytics.hilariousIT = hilariousIT;
+}
+
+public static Set<String> getHilariousITList() {
+	return hilariousITList;
+}
+
+public static void setHilariousITList(Set<String> hilariousITList) {
+	Analytics.hilariousITList = hilariousITList;
 }
 	
 	
