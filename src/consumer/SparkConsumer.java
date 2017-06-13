@@ -103,7 +103,7 @@ public class SparkConsumer {
 	}
 	
 	private static String chooseTopic(){
-		 String [] options = {"hashtags", "mentions", "original-text", "processed-text"};
+		 String [] options = {"hashtags", "mentions", "original-text", "processed-text", "sentiment"};
 		 UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
 		 UIManager.put("Panel.background",new ColorUIResource(214,227,249));
 		 Dimension size = UIManager.getDimension("OptionPane.minimumSize");

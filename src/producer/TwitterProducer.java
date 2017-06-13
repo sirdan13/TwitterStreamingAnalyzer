@@ -110,6 +110,7 @@ public class TwitterProducer {
 		int i = 0;
 		int j = 0;
 		int k = 0;
+		int q = 0;
 
 		Analytics.init();
 		 
@@ -146,6 +147,7 @@ public class TwitterProducer {
 				if(ret.getUserMentionEntities().length>0)
 					for(UserMentionEntity ue : ret.getUserMentionEntities())
 						producer.send(new ProducerRecord<String, String>("mentions", Integer.toString(k++), ue.getScreenName()));
+				producer.send(new ProducerRecord<String, String>("sentiment", ret.getLang(), ret.getText()));
 				tlist.add(t);
 				j++;
 			}

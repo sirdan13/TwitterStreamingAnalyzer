@@ -383,7 +383,7 @@ static PairFlatMapFunction<List<String>, String, Integer> htExtractor = new Pair
 		for(String h : list)
 			temp.add(new Tuple2<String, Integer>(h, 1));
 		return temp.iterator();
-}
+		}
 
 };
 	

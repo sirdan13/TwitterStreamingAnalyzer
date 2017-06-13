@@ -249,7 +249,6 @@
 	</classpathentry>
 	<classpathentry kind="lib" path="C:/Users/daniele/workspace/TwitterStreamingAnalyzer/driver/other/commons-codec-1.9.jar"/>
 	<classpathentry kind="lib" path="C:/Users/daniele/workspace/TwitterStreamingAnalyzer/driver/other/commons-logging-1.2.jar"/>
-	<classpathentry kind="lib" path="C:/Users/daniele/workspace/TwitterStreamingAnalyzer/driver/other/fluent-hc-4.5.3.jar"/>
 	<classpathentry kind="lib" path="C:/Users/daniele/workspace/TwitterStreamingAnalyzer/driver/other/httpclient-4.2.jar"/>
 	<classpathentry kind="lib" path="C:/Users/daniele/workspace/TwitterStreamingAnalyzer/driver/other/httpclient-4.5.3.jar"/>
 	<classpathentry kind="lib" path="C:/Users/daniele/workspace/TwitterStreamingAnalyzer/driver/other/httpclient-cache-4.5.3.jar"/>
@@ -266,5 +265,10 @@
 	<classpathentry kind="lib" path="C:/Users/daniele/workspace/TwitterStreamingAnalyzer/driver/spark-streaming_2.11-2.1.1.jar"/>
 	<classpathentry kind="lib" path="C:/Users/daniele/workspace/TwitterStreamingAnalyzer/driver/spark-streaming-kafka_2.10-1.0.2.jar"/>
 	<classpathentry kind="lib" path="C:/Users/daniele/workspace/TwitterStreamingAnalyzer/driver/spark-streaming-kafka_2.11-1.4.0.jar"/>
+	<classpathentry kind="lib" path="C:/Users/daniele/workspace/TwitterStreamingAnalyzer/driver/emoji-java-3.2.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/daniele/workspace/TwitterStreamingAnalyzer/driver/emoji-java-3.2.0-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

@@ -17,6 +17,8 @@ import org.apache.spark.streaming.api.java.JavaPairDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka.KafkaUtils;
 
+import com.vdurmont.emoji.EmojiParser;
+
 import scala.Tuple2;
 
 public class ConsumerAnalytics {
@@ -43,9 +45,6 @@ public class ConsumerAnalytics {
 		ConsumerAnalytics.topics=topics;
 	}
 	
-	public static void loadSentimentDictionaries() {
-		
-	}
 	
 	public void analyzeTopic(String topic) throws InterruptedException{
 		if(topic=="hashtags")
@@ -54,8 +53,10 @@ public class ConsumerAnalytics {
 			analyzeMentions();
 		if(topic=="original-text")
 			analyzeOriginalText();
-		if(topic=="processed-text2")
+		if(topic=="processed-text")
 			analyzeProcessedText();
+		if(topic=="sentiment")
+			analyzeSentiment();
 	}
 	
 	private static void analyzeProcessedText() throws InterruptedException {
@@ -96,6 +97,18 @@ public class ConsumerAnalytics {
 		jssc.awaitTermination();
 	}
 	
+	private static void analyzeSentiment() throws InterruptedException{
+		messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
+	//	setSentiment();
+		lines = messages.mapToPair((x)->(new Tuple2<String, Integer>(x._2, 1))).reduceByKey(sumFunc);
+		JavaPairDStream<Integer,String> sortedStream = lines.mapToPair(x->x.swap()).transformToPair(sortFunc);
+		sortedStream.print();
+		jssc.start();
+		jssc.awaitTermination();
+	}
+	
+	
+
 	static Function2<Integer, Integer, Integer> sumFunc = new Function2<Integer, Integer, Integer>() {
 
 		
@@ -131,6 +144,170 @@ public class ConsumerAnalytics {
 
 		
         };
-	
+        
+        
+        static Function<Tuple2<String, String>, Tuple2<String, Integer>> sentimentFunc = new Function<Tuple2<String, String>, Tuple2<String, Integer>>(){
+        	private static final long serialVersionUID = 1L;
+
+
+			@Override
+			public Tuple2<String, Integer> call(Tuple2<String, String> x) throws Exception {
+				boolean like = false, sad = false, angry = false, hilarious = false, neutral = false;
+				boolean [] sentiments = {like, angry, sad, hilarious, neutral};
+				sentiments = checkEmojis(x, sentiments);
+				if(checkSentiment(sentiments))
+					return setSentiment(sentiments);
+				sentiments = checkText(x, sentiments);
+				return setSentiment(sentiments);
+			}
+			
+			//Verifica se un sentiment è stato trovato
+			private boolean checkSentiment(boolean [] sentiments){
+				int count = 0;
+				for(boolean b : sentiments){
+					if(!b){
+						count++;
+					}
+				}
+				//Se count=5, il sentiment non è ancora stato stabilito, poiché sono tutti false
+				if(count==5)
+					return false;
+				//Restituisco true se ho trovato almeno un sentiment
+				if(count<5)
+					return true;
+				return false;
+					
+			}
+
+			//Stabilisce definitivamente di quale sentiment si tratta
+			private Tuple2<String, Integer> setSentiment(boolean [] sentiments) {
+				//Se sono stati individuati 3 o più sentiment differenti, classificheremo il testo come neutrale
+				if(sentiments[4])
+					return new Tuple2<String, Integer>("neutral", 1);
+				
+				//Altrimenti verifichiamo se sia stato dichiarato un solo sentiment
+				if(sentiments[0] && !sentiments[1] && !sentiments[2] && !sentiments[3])
+					return new Tuple2<String, Integer>("like", 1);
+				if(!sentiments[0] && sentiments[1] && !sentiments[2] && !sentiments[3])
+					return new Tuple2<String, Integer>("angry", 1);
+				if(!sentiments[0] && !sentiments[1] && sentiments[2] && !sentiments[3])
+					return new Tuple2<String, Integer>("sad", 1);
+				if(!sentiments[0] && !sentiments[1] && !sentiments[2] && sentiments[3])
+					return new Tuple2<String, Integer>("hilarious", 1);
+				
+				//Risolvo eventuali ambiguità (2 sentiment individuati nello stesso testo)
+				if(sentiments[0] && sentiments[1])
+					return new Tuple2<String, Integer>("angry", 1);
+				if(sentiments[0] && sentiments[3])
+					return new Tuple2<String, Integer>("hilarious", 1);
+				if(sentiments[0] && sentiments[2])
+					return new Tuple2<String, Integer>("sad", 1);
+				if(sentiments[2] && sentiments[3])
+					return new Tuple2<String, Integer>("sad", 1);
+				if(sentiments[2] && sentiments[1])
+					return new Tuple2<String, Integer>("angry", 1);
+				if(sentiments[1] && sentiments[3])
+					return new Tuple2<String, Integer>("hilarious", 1);
+				
+				return null;
+			}
+
+
+		private boolean[] checkEmojis(Tuple2<String, String> x, boolean [] sentiments) {
+			String text = EmojiParser.parseToAliases(x._2);
+			int count = 0;
+			for(String w : text.split(" ")){
+				if(Analytics.getEmojiLikeSet().contains(w) && !sentiments[0]){
+					sentiments[0]=true;
+					count++;
+				}
+					
+				if(Analytics.getEmojiAngrySet().contains(w) && !sentiments[1]){
+					sentiments[1]=true;
+					count++;
+				}
+					
+				if(Analytics.getEmojiSadSet().contains(w) && !sentiments[2]){
+					sentiments[2]=true;
+					count++;
+				}
+					
+				if(Analytics.getEmojiHilariousSet().contains(w) && !sentiments[3]){
+					sentiments[3]=true;
+					count++;
+				}
+					
+			}
+			//Se il conteggio è maggiore di 3, avremo un sentiment neutrale
+			if(count>=3)
+				sentiments[4]=true;
+			
+			return sentiments;
+			
+			
+		}
+        
+        
+        
+       private boolean[] checkText(Tuple2<String, String> x, boolean[] sentiments){
+ 
+        	int count = 0;
+			//Verifico lingua del tweet
+			if(x._1().equals("it")){
+				for(String w : x._2.split(" ")){
+					if(Analytics.getLikeITList().contains(w) && !sentiments[0]){
+						sentiments[0]=true;
+						count++;
+					}
+						
+					if(Analytics.getAngryITList().contains(w) && !sentiments[1]){
+						sentiments[1]=true;
+						count++;
+					}
+						
+					if(Analytics.getSadITList().contains(w) && !sentiments[2]){
+						sentiments[2]=true;
+						count++;
+					}
+						
+					if(Analytics.getHilariousITList().contains(w) && !sentiments[3]){
+						sentiments[3]=true;
+						count++;
+					}
+						
+				}
+			}
+			if(x._1().equals("en")){
+				for(String w : x._2.split(" ")){
+					if(Analytics.getLikeENList().contains(w) && !sentiments[0]){
+						sentiments[0]=true;
+						count++;
+					}
+						
+					if(Analytics.getAngryENList().contains(w) && !sentiments[1]){
+						sentiments[1]=true;
+						count++;
+					}
+						
+					if(Analytics.getSadENList().contains(w) && !sentiments[2]){
+						sentiments[2]=true;
+						count++;
+					}
+						
+					if(Analytics.getHilariousENList().contains(w) && !sentiments[3]){
+						sentiments[3]=true;
+						count++;
+					}
+						
+				}
+			}
+			//Se il conteggio è maggiore di 3, avremo un sentiment neutrale
+			if(count>=3)
+				sentiments[4]=true;
+			return sentiments;
+			
+        }
+    
+      };
 
 }
