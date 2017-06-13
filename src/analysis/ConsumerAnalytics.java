@@ -1,7 +1,6 @@
 package analysis;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -9,14 +8,11 @@ import java.util.Map;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
-import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.api.java.JavaPairDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka.KafkaUtils;
@@ -58,7 +54,7 @@ public class ConsumerAnalytics {
 			analyzeMentions();
 		if(topic=="original-text")
 			analyzeOriginalText();
-		if(topic=="processed-text")
+		if(topic=="processed-text2")
 			analyzeProcessedText();
 	}
 	
@@ -102,6 +98,7 @@ public class ConsumerAnalytics {
 	
 	static Function2<Integer, Integer, Integer> sumFunc = new Function2<Integer, Integer, Integer>() {
 
+		
 		private static final long serialVersionUID = 1L;
 
 		@Override public Integer call(Integer i1, Integer i2) throws Exception {
@@ -126,7 +123,7 @@ public class ConsumerAnalytics {
          public Iterator<String> call(Tuple2<String,String> x) throws Exception {
                     List<String> output = new ArrayList<String>();
                     if(x._2.length()==0)
-                    	return output.iterator();
+                    	output.add("ERR");
                     for(String w : x._2().split(" "))
                     	output.add(w);
                     return output.iterator();

@@ -40,7 +40,7 @@ import org.apache.spark.streaming.kafka.KafkaUtils;
 /**
  * Consumes messages from one or more topics in Kafka and does wordcount.
  *
- * Usage: JavaKafkaWordCount <zkQuorum> <group> <topics> <numThreads>
+ * Usage: WordCountExample <zkQuorum> <group> <topics> <numThreads>
  *   <zkQuorum> is a list of one or more zookeeper servers that make quorum
  *   <group> is the name of kafka consumer group
  *   <topics> is a list of one or more kafka topics to consume from
@@ -51,15 +51,15 @@ import org.apache.spark.streaming.kafka.KafkaUtils;
  *    zoo03 my-consumer-group topic1,topic2 1`
  */
 
-public final class JavaKafkaWordCount {
+public final class WordCountExample {
   private static final Pattern SPACE = Pattern.compile(" ");
 
-  private JavaKafkaWordCount() {
+  private WordCountExample() {
   }
 
   public static void main(String[] args) throws Exception {
     if (args.length < 4) {
-      System.err.println("Usage: JavaKafkaWordCount <zkQuorum> <group> <topics> <numThreads>");
+      System.err.println("Usage: WordCountExample <zkQuorum> <group> <topics> <numThreads>");
       System.exit(1);
     }
     
@@ -68,7 +68,7 @@ public final class JavaKafkaWordCount {
      */
 
     StreamingExamples.setStreamingLogLevels();
-    SparkConf sparkConf = new SparkConf().setAppName("JavaKafkaWordCount").setMaster("local[*]");
+    SparkConf sparkConf = new SparkConf().setAppName("WordCountExample").setMaster("local[*]");
     // Create the context with 2 seconds batch size
     JavaStreamingContext jssc = new JavaStreamingContext(sparkConf, new Duration(2000));
 

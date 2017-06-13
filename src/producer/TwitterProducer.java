@@ -145,7 +145,7 @@ public class TwitterProducer {
 				//Invia i dati al topic "mentions"
 				if(ret.getUserMentionEntities().length>0)
 					for(UserMentionEntity ue : ret.getUserMentionEntities())
-						producer.send(new ProducerRecord<String, String>("mentions5", Integer.toString(k++), ue.getScreenName()));
+						producer.send(new ProducerRecord<String, String>("mentions", Integer.toString(k++), ue.getScreenName()));
 				tlist.add(t);
 				j++;
 			}

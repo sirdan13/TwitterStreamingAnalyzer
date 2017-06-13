@@ -1,6 +1,5 @@
 package consumer;
 
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.io.File;
@@ -18,7 +17,6 @@ import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.UnsupportedLookAndFeelException;
@@ -40,13 +38,14 @@ public class SparkConsumer {
 	
 	public static void main(String[] args) throws FileNotFoundException, InterruptedException, ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException {
 		
-    	 for (LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
- 	        if ("Windows".equals(info.getName())) {
- 	            UIManager.setLookAndFeel(info.getClassName());
- 	            break;
- 	        }
- 	    }
-    	 
+    	/*
+    	 * Imposto il Look and Feel per la grafica delle finestre interattive
+    	 */
+    	setGraphic("Windows");
+    	
+    	/*
+    	 * Scelgo il topic da analizzare
+    	 */
     	chooseTopic();
 		while(topic==null){
 			if(noTopicChosen()==0){
@@ -56,9 +55,17 @@ public class SparkConsumer {
 			else
 				System.exit(-1);
 		}
-			
+		
+		/*
+		 * Carico le proprietà di Spark e inizializzo le variabili corrispondenti
+		 */
 		loadProperties();
 		init();
+		
+		/*
+		 * Creo un oggetto di classe ConsumerAnalytics, passandogli i parametri di Spark,
+		 * e chiamo il suo metodo analyzeTopic, per analizzare il topic desiderato
+		 */
 		ConsumerAnalytics ca = new ConsumerAnalytics(jssc, zookeeper_server, kafka_consumer_group, topics);
 		ca.analyzeTopic(topic);
 
@@ -99,27 +106,30 @@ public class SparkConsumer {
 		 String [] options = {"hashtags", "mentions", "original-text", "processed-text"};
 		 UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
 		 UIManager.put("Panel.background",new ColorUIResource(214,227,249));
-		 UIManager.put("OptionPane.messageFont", "Verdana");
-		 UIManager.put("OptionPane.messageForeground", Color.green);
 		 Dimension size = UIManager.getDimension("OptionPane.minimumSize");
 		 size.width = 350;
 		 size.height= 220;
 		 UIManager.put("OptionPane.minimumSize", size);
 		 JLabel label = new JLabel("Scegli un topic:");
 		 label.setFont(new Font("Calibri", Font.BOLD, 20));
-		 label.setHorizontalAlignment(SwingConstants.LEFT);
-		 label.setVerticalAlignment(SwingConstants.CENTER);
-		 topic = (String) JOptionPane.showInputDialog(null, label, "Topic", 3, icon, options, label);
+		 topic = (String) JOptionPane.showInputDialog(null, label, "Topic", 3, icon, options, options[0]);
 		 return topic;
 	}
 	
 	private static int noTopicChosen() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException{
 		JLabel label2 = new JLabel("<html>Nessun topic scelto.<br>Riprovare?</html>");
 		label2.setFont(new Font("Calibri", Font.BOLD, 20));
-		label2.setHorizontalAlignment(SwingConstants.LEFT);
-		label2.setVerticalAlignment(SwingConstants.CENTER);
 		String [] errorOptions = {"Riprova", "Esci"};
 		return JOptionPane.showOptionDialog(null, label2, "Topic", 0, 0, icon, errorOptions, "Riprova");
 		}
+	
+	private static void setGraphic(String lf) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException{
+		for (LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+ 	        if (lf.equals(info.getName())) {
+ 	            UIManager.setLookAndFeel(info.getClassName());
+ 	            break;
+ 	        }
+ 	    }
+	}
 	
 }

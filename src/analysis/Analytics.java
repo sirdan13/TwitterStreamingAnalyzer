@@ -1,6 +1,7 @@
 package analysis;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -10,16 +11,20 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.api.java.function.Function2;
-import org.apache.spark.api.java.function.PairFunction;
+import org.apache.spark.api.java.function.PairFlatMapFunction;
+
 import scala.Tuple2;
 import utilities.Tweet;
 
 public class Analytics {
 
 	private static JavaSparkContext jsc;
+	
+	//Set di stopwords
 	private static JavaRDD<String> stopWords;
 	private static Set<String> stopWordsSet;
+	
+	//Set di dizionari
 	private static JavaRDD<String> likeEN;
 	private static Set<String> likeENList;
 	private static JavaRDD<String> sadEN;
@@ -37,8 +42,43 @@ public class Analytics {
 	private static JavaRDD<String> hilariousIT;
 	private static Set<String> hilariousITList;
 	
-
+	//Set di emoji
+	private static JavaRDD<String> emojiLike;
+	private static Set<String> emojiLikeSet;
+	private static JavaRDD<String> emojiSad;
+	private static Set<String> emojiSadSet;
+	private static JavaRDD<String> emojiAngry;
+	private static Set<String> emojiAngrySet;
+	private static JavaRDD<String> emojiHilarious;
+	private static Set<String> emojiHilariousSet;
 	
+
+private static void setAllDictionaries() {
+	
+	/*
+	 * Imposto i dizionari dei sentiment in lingua inglese
+	 */
+		setLikeEN("words/en/Love-Like-Wow.txt");
+		setAngryEN("words/en/Angry.txt");
+		setHilariousEN("words/en/Hilarious.txt");
+		setSadEN("words/en/Sad.txt");
+		
+	/*
+	 * Imposto i dizionari dei sentiment in lingua italiana
+	 */
+		setLikeIT("words/it/Love-Like-Wow.txt");
+		setAngryIT("words/it/Angry.txt");
+		setHilariousIT("words/it/Hilarious.txt");
+		setSadIT("words/it/Sad.txt");
+		
+	/*
+	 * Imposto i dizionari delle emoji
+	 */
+		setEmojiLike("words/emoji/emojilike.txt");
+		setEmojiSad("words/emoji/emojisad.txt");
+		setEmojiAngry("words/emoji/emojiangry.txt");
+		setEmojiHilarious("words/emoji/emojihilarious.txt");
+	}
 	
 	
 
@@ -59,62 +99,38 @@ public class Analytics {
 		conf.setMaster("local[*]");
 		jsc = new JavaSparkContext(conf); 
 		setStopWords("config/stopwords.txt");
-		setStopWordsSet(new HashSet<String>(Analytics.getStopWords().collect()));
-	//	setLikeEN("words/en/Love-Like-Wow.txt");
-	//	setStopWordsSet(new HashSet<String>(Analytics.getStopWords().collect()));
+		setAllDictionaries();
 		
-
 	}
 	
+	
+
 	public static List<Tuple2<Integer, String>> countHashtag(List<Tweet> tlist) {
 		
 		JavaRDD<Tweet> pTweet = jsc.parallelize(tlist);
 		JavaRDD<List<String>> pHashtags = pTweet.map((x)->new ArrayList<String>(x.getHashtagsList()));
-		JavaPairRDD<String, Integer> htCount = pHashtags.flatMapToPair(new HashtagsExtractor());
-		JavaPairRDD<String, Integer> htFreq = htCount.reduceByKey(new SommaFrequenze()).filter(x->(x._2>1));
-		JavaPairRDD<Integer, String> htFreq2 = htFreq.mapToPair(new SwapKeyValue()).sortByKey(false);
+		JavaPairRDD<String, Integer> htCount = pHashtags.flatMapToPair(htExtractor);
+		JavaPairRDD<String, Integer> htFreq = htCount.reduceByKey(ConsumerAnalytics.sumFunc).filter(x->(x._2>1));
+		JavaPairRDD<Integer, String> htFreq2 = htFreq.mapToPair(x->x.swap()).sortByKey(false);
 		List<Tuple2<Integer, String>> output = htFreq2.take(10);
 		return output;
 	
 	}
 	
 public static JavaPairRDD<Integer, String> countHashtag(JavaRDD<String> words) {
-		
-//		JavaRDD<String> pTweet = lines.compute(lines);
+
+	JavaPairRDD<String, Integer> wordCount = words.mapToPair((x)->new Tuple2<String, Integer>(x, 1)).reduceByKey(ConsumerAnalytics.sumFunc);
+	return  wordCount.mapToPair(x->x.swap()).sortByKey(false);
 	
-	JavaPairRDD<String, Integer> wordCount = words.mapToPair((x)->new Tuple2<String, Integer>(x, 1)).reduceByKey(new Function2<Integer, Integer, Integer>() {
-        @Override
-        public Integer call(Integer arg0, Integer arg1) {
-          return arg0+arg1;
-        }
-      });
-	
-	return  wordCount.mapToPair(new PairFunction<Tuple2<String, Integer>, Integer, String>(){
-		@Override
-		public Tuple2<Integer, String> call (Tuple2<String, Integer> arg0){
-			return arg0.swap();
-		}
-	}).sortByKey(false);
-	
-	/*
-	
-		JavaRDD<List<String>> pHashtags = pTweet.map((x)->new ArrayList<String>(x.getHashtagsList()));
-		JavaPairRDD<String, Integer> htCount = pHashtags.flatMapToPair(new HashtagsExtractor());
-		JavaPairRDD<String, Integer> htFreq = htCount.reduceByKey(new SommaFrequenze()).filter(x->(x._2>1));
-		JavaPairRDD<Integer, String> htFreq2 = htFreq.mapToPair(new SwapKeyValue()).sortByKey(false);
-		List<Tuple2<Integer, String>> output = htFreq2.take(10);
-		return output;
-	*/
-	}
+}
 
 public static JavaRDD<String> getStopWords() {
 	return stopWords;
 }
 
 public static void setStopWords(String file) {
-	
 	Analytics.stopWords=jsc.textFile(file).distinct();
-
+	setStopWordsSet(new HashSet<String>(Analytics.getStopWords().collect()));
 }
 
 public static JavaSparkContext getJsc() {
@@ -138,8 +154,8 @@ public static JavaRDD<String> getLikeEN() {
 	return likeEN;
 }
 
-public static void setLikeEN(JavaRDD<String> likeEN) {
-	Analytics.likeEN = likeEN;
+public static void setLikeEN(String file) {
+	setLikeENList(new HashSet<String>(jsc.textFile(file).distinct().collect()));
 }
 
 public static Set<String> getLikeENList() {
@@ -154,8 +170,8 @@ public static JavaRDD<String> getSadEN() {
 	return sadEN;
 }
 
-public static void setSadEN(JavaRDD<String> sadEN) {
-	Analytics.sadEN = sadEN;
+public static void setSadEN(String file) {
+	setSadENList(new HashSet<String>(jsc.textFile(file).distinct().collect()));
 }
 
 public static Set<String> getSadENList() {
@@ -170,8 +186,8 @@ public static JavaRDD<String> getAngryEN() {
 	return angryEN;
 }
 
-public static void setAngryEN(JavaRDD<String> angryEN) {
-	Analytics.angryEN = angryEN;
+public static void setAngryEN(String file) {
+	setAngryENList(new HashSet<String>(jsc.textFile(file).distinct().collect()));
 }
 
 public static Set<String> getAngryENList() {
@@ -186,8 +202,8 @@ public static JavaRDD<String> getHilariousEN() {
 	return hilariousEN;
 }
 
-public static void setHilariousEN(JavaRDD<String> hilariousEN) {
-	Analytics.hilariousEN = hilariousEN;
+public static void setHilariousEN(String file) {
+	setHilariousENList(new HashSet<String>(jsc.textFile(file).distinct().collect()));
 }
 
 public static Set<String> getHilariousENList() {
@@ -198,12 +214,13 @@ public static void setHilariousENList(Set<String> hilariousENList) {
 	Analytics.hilariousENList = hilariousENList;
 }
 
+
 public static JavaRDD<String> getLikeIT() {
 	return likeIT;
 }
 
-public static void setLikeIT(JavaRDD<String> likeIT) {
-	Analytics.likeIT = likeIT;
+public static void setLikeIT(String file) {
+	setLikeITList(new HashSet<String>(jsc.textFile(file).distinct().collect()));
 }
 
 public static Set<String> getLikeITList() {
@@ -218,8 +235,8 @@ public static JavaRDD<String> getSadIT() {
 	return sadIT;
 }
 
-public static void setSadIT(JavaRDD<String> sadIT) {
-	Analytics.sadIT = sadIT;
+public static void setSadIT(String file) {
+	setSadITList(new HashSet<String>(jsc.textFile(file).distinct().collect()));
 }
 
 public static Set<String> getSadITList() {
@@ -234,8 +251,8 @@ public static JavaRDD<String> getAngryIT() {
 	return angryIT;
 }
 
-public static void setAngryIT(JavaRDD<String> angryIT) {
-	Analytics.angryIT = angryIT;
+public static void setAngryIT(String file) {
+	setAngryITList(new HashSet<String>(jsc.textFile(file).distinct().collect()));
 }
 
 public static Set<String> getAngryITList() {
@@ -250,8 +267,8 @@ public static JavaRDD<String> getHilariousIT() {
 	return hilariousIT;
 }
 
-public static void setHilariousIT(JavaRDD<String> hilariousIT) {
-	Analytics.hilariousIT = hilariousIT;
+public static void setHilariousIT(String file) {
+	setHilariousITList(new HashSet<String>(jsc.textFile(file).distinct().collect()));
 }
 
 public static Set<String> getHilariousITList() {
@@ -261,6 +278,114 @@ public static Set<String> getHilariousITList() {
 public static void setHilariousITList(Set<String> hilariousITList) {
 	Analytics.hilariousITList = hilariousITList;
 }
+
+
+
+public static JavaRDD<String> getEmojiLike() {
+	return emojiLike;
+}
+
+
+
+public static void setEmojiLike(String file) {
+	setEmojiLikeSet(new HashSet<String>(jsc.textFile(file).distinct().collect()));
+}
+
+
+
+public static Set<String> getEmojiLikeSet() {
+	return emojiLikeSet;
+}
+
+
+
+public static void setEmojiLikeSet(Set<String> emojiLikeSet) {
+	Analytics.emojiLikeSet = emojiLikeSet;
+}
+
+
+
+public static JavaRDD<String> getEmojiSad() {
+	return emojiSad;
+}
+
+
+
+public static void setEmojiSad(String file) {
+	setEmojiSadSet(new HashSet<String>(jsc.textFile(file).distinct().collect()));
+}
+
+
+
+public static Set<String> getEmojiSadSet() {
+	return emojiSadSet;
+}
+
+
+
+public static void setEmojiSadSet(Set<String> emojiSadSet) {
+	Analytics.emojiSadSet = emojiSadSet;
+}
+
+
+
+public static JavaRDD<String> getEmojiAngry() {
+	return emojiAngry;
+}
+
+
+
+public static void setEmojiAngry(String file) {
+	setEmojiAngrySet(new HashSet<String>(jsc.textFile(file).distinct().collect()));
+}
+
+
+
+public static Set<String> getEmojiAngrySet() {
+	return emojiAngrySet;
+}
+
+
+
+public static void setEmojiAngrySet(Set<String> emojiAngrySet) {
+	Analytics.emojiAngrySet = emojiAngrySet;
+}
+
+
+
+public static JavaRDD<String> getEmojiHilarious() {
+	return emojiHilarious;
+}
+
+
+
+public static void setEmojiHilarious(String file) {
+	setEmojiHilariousSet(new HashSet<String>(jsc.textFile(file).distinct().collect()));
+}
+
+
+
+public static Set<String> getEmojiHilariousSet() {
+	return emojiHilariousSet;
+}
+
+
+
+public static void setEmojiHilariousSet(Set<String> emojiHilariousSet) {
+	Analytics.emojiHilariousSet = emojiHilariousSet;
+}
+
+static PairFlatMapFunction<List<String>, String, Integer> htExtractor = new PairFlatMapFunction<List<String>, String, Integer>(){
+	private static final long serialVersionUID = 1L;
+
+	public Iterator<Tuple2<String, Integer>> call(List<String> list) throws Exception {
+		ArrayList<Tuple2<String, Integer>> temp = new ArrayList<Tuple2<String, Integer>>();
+		for(String h : list)
+			temp.add(new Tuple2<String, Integer>(h, 1));
+		return temp.iterator();
+}
+
+};
 	
 	
 
