@@ -22,6 +22,7 @@ import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
+import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.streaming.api.java.JavaPairDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka.KafkaUtils;
@@ -35,6 +36,7 @@ public class Analytics {
 
 	//Configurazione di Spark e Spark Streaming
 	private static JavaSparkContext jsc;
+	//TODO eliminare jsc, una volta che lavoreremo con jssc non ne avremo più bisogno
 	static SparkConf conf;
 	static JavaStreamingContext jssc;
 	static String master = "";
@@ -47,7 +49,6 @@ public class Analytics {
 	static Map<String, Integer> topics;
 	static JavaPairDStream<String, String> messages;
 	static JavaPairDStream<String, Integer> lines;
-	static JavaPairDStream<Integer,String> sortedStream;
 	
 	//Icona per le finestre interattive
 	static Icon icon = new ImageIcon("config/icon.png");
@@ -170,28 +171,21 @@ private static void setAllDictionaries() {
 		Analytics.stopWords = stopWords;
 	}
 
-	static FlatMapFunction<Tuple2<String, String>, String> sentimentFunc = new FlatMapFunction<Tuple2<String, String>, String>(){
+	static PairFunction<Tuple2<String, String>, String, Integer> sentimentFunc = new PairFunction<Tuple2<String, String>, String, Integer>(){
 	    	private static final long serialVersionUID = 1L;
 	
 	
 			@Override
-			public Iterator<String> call(Tuple2<String, String> x) throws Exception {
-				List<String> output = new ArrayList<String>();
-				if(x._2==null){
-					output.add("ERR");
-					return output.iterator();
-				}
+			public Tuple2<String, Integer> call(Tuple2<String, String> x) throws Exception {
+				if(x._2==null)
+					return new Tuple2<String, Integer>("ERR", 1);
 				boolean like = false, sad = false, angry = false, hilarious = false, neutral = false;
 				boolean [] sentiments = {like, angry, sad, hilarious, neutral};
 				sentiments = checkEmojis(x, sentiments);
-				if(checkSentiment(sentiments)){
-					output.add(setSentiment(sentiments));
-					return output.iterator();
-				}
-					
+				if(checkSentiment(sentiments))
+					return setSentiment(sentiments);
 				sentiments = checkText(x, sentiments);
-				output.add(setSentiment(sentiments));
-				return output.iterator();
+				return setSentiment(sentiments);
 			}
 			
 	  };
@@ -216,36 +210,36 @@ private static void setAllDictionaries() {
 		}
 
 		//Stabilisce definitivamente di quale sentiment si tratta
-		private static String setSentiment(boolean [] sentiments) {
+		private static Tuple2<String, Integer> setSentiment(boolean [] sentiments) {
 			//Se sono stati individuati 3 o più sentiment differenti, classificheremo il testo come neutrale
 			if(sentiments[4])
-				return "neutral";
+				return new Tuple2<String, Integer>("neutral", 1);
 			
 			//Altrimenti verifichiamo se sia stato dichiarato un solo sentiment
 			if(sentiments[0] && !sentiments[1] && !sentiments[2] && !sentiments[3])
-				return "like";
+				return new Tuple2<String, Integer>("like", 1);
 			if(!sentiments[0] && sentiments[1] && !sentiments[2] && !sentiments[3])
-				return "angry";
+				return new Tuple2<String, Integer>("angry", 1);
 			if(!sentiments[0] && !sentiments[1] && sentiments[2] && !sentiments[3])
-				return "sad";
+				return new Tuple2<String, Integer>("sad", 1);
 			if(!sentiments[0] && !sentiments[1] && !sentiments[2] && sentiments[3])
-				return "hilarious";
+				return new Tuple2<String, Integer>("hilarious", 1);
 			
 			//Risolvo eventuali ambiguità (2 sentiment individuati nello stesso testo)
 			if(sentiments[0] && sentiments[1])
-				return "angry";
+				return new Tuple2<String, Integer>("angry", 1);
 			if(sentiments[0] && sentiments[3])
-				return "hilarious";
+				return new Tuple2<String, Integer>("hilarious", 1);
 			if(sentiments[0] && sentiments[2])
-				return "sad";
+				return new Tuple2<String, Integer>("sad", 1);
 			if(sentiments[2] && sentiments[3])
-				return "sad";
+				return new Tuple2<String, Integer>("sad", 1);
 			if(sentiments[2] && sentiments[1])
-				return "angry";
+				return new Tuple2<String, Integer>("angry", 1);
 			if(sentiments[1] && sentiments[3])
-				return "hilarious";
+				return new Tuple2<String, Integer>("hilarious", 1);
 			
-			return "ERR";
+			return null;
 		}
 
 
@@ -276,8 +270,8 @@ private static void setAllDictionaries() {
 			}
 				
 		}
-		//Se il conteggio è maggiore di 3 o non è stato mai incrementato, avremo un sentiment neutrale
-		if(count>=3 || count==0)
+		//Se il conteggio è maggiore di 3, avremo un sentiment neutrale
+		if(count>=3)
 			sentiments[4]=true;
 		
 		return sentiments;
@@ -344,8 +338,8 @@ private static void setAllDictionaries() {
 					
 			}
 		}
-		//Se il conteggio è maggiore di 3 o non è stato mai incrementato, avremo un sentiment neutrale
-		if(count>=3 || count == 0)
+		//Se il conteggio è maggiore di 3, avremo un sentiment neutrale
+		if(count>=3)
 			sentiments[4]=true;
 		return sentiments;
 		
@@ -678,7 +672,7 @@ static PairFlatMapFunction<List<String>, String, Integer> htExtractor = new Pair
 private static void analyzeHashtags() throws InterruptedException {
 	messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
 	lines = messages.mapToPair((x)->(new Tuple2<String, Integer>(x._2, 1))).reduceByKey(sumFunc);
-	sortedStream = lines.mapToPair(x->x.swap()).transformToPair(sortFunc);
+	JavaPairDStream<Integer,String> sortedStream = lines.mapToPair(x->x.swap()).transformToPair(sortFunc);
 	sortedStream.print();
 	jssc.start();
 	jssc.awaitTermination();
@@ -689,7 +683,7 @@ private static void analyzeHashtags() throws InterruptedException {
 private static void analyzeMentions() throws InterruptedException {
 	messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
 	lines = messages.mapToPair((x)->(new Tuple2<String, Integer>(x._2, 1))).reduceByKey(sumFunc);
-	sortedStream = lines.mapToPair(x->x.swap()).transformToPair(sortFunc);
+	JavaPairDStream<Integer,String> sortedStream = lines.mapToPair(x->x.swap()).transformToPair(sortFunc);
 	sortedStream.print();
 	jssc.start();
 	jssc.awaitTermination();
@@ -701,7 +695,7 @@ private static void analyzeMentions() throws InterruptedException {
 private static void analyzeOriginalText() throws InterruptedException {
 	messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
 	JavaPairDStream<String, Integer> words = messages.flatMap(wordFunc).mapToPair((x)->(new Tuple2<String, Integer>(x, 1))).reduceByKey(sumFunc);
-	sortedStream = words.mapToPair(x->x.swap()).transformToPair(sortFunc);
+	JavaPairDStream<Integer,String> sortedStream = words.mapToPair(x->x.swap()).transformToPair(sortFunc);
 	sortedStream.print();
 	jssc.start();
 	jssc.awaitTermination();
@@ -713,7 +707,7 @@ private static void analyzeOriginalText() throws InterruptedException {
 private static void analyzeProcessedText() throws InterruptedException {
 	messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
 	JavaPairDStream<String, Integer> words = messages.flatMap(wordFunc).mapToPair((x)->(new Tuple2<String, Integer>(x, 1))).reduceByKey(sumFunc);
-	sortedStream = words.mapToPair(x->x.swap()).transformToPair(sortFunc);
+	JavaPairDStream<Integer,String> sortedStream = words.mapToPair(x->x.swap()).transformToPair(sortFunc);
 	sortedStream.print();
 	jssc.start();
 	jssc.awaitTermination();
@@ -723,11 +717,32 @@ private static void analyzeProcessedText() throws InterruptedException {
 
 private static void analyzeSentiment() throws InterruptedException{
 	messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
-	sortedStream = messages.flatMap(sentimentFunc).mapToPair((x)->(new Tuple2<String, Integer>(x, 1))).reduceByKey(sumFunc).mapToPair(x->x.swap()).transformToPair(sortFunc);
-	sortedStream.print();
+	lines = messages.mapToPair(sentimentFunc).reduceByKey(sumFunc);
+	lines = messages.flatMap(sentiment2).mapToPair((x)->(new Tuple2<String, Integer>(x, 1))).reduceByKey(sumFunc);
+	lines.print();
 	jssc.start();
 	jssc.awaitTermination();
 }
+
+
+static FlatMapFunction<Tuple2<String, String>, String> sentiment2 = new FlatMapFunction<Tuple2<String, String>, String>(){
+	 private static final long serialVersionUID = 1L;
+	
+	@Override
+	 public Iterator<String> call(Tuple2<String,String> x) throws Exception {
+	            List<String> output = new ArrayList<String>();
+	            if(x._2.length()==0)
+	            	output.add("ERR");
+	            for(String w : x._2().split(" "))
+	            	output.add("neutral");
+	            return output.iterator();
+	            }
+	
+	
+	};
+
+
+
 
 
 public void analyzeTopic(String topic) throws InterruptedException{
