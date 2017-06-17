@@ -36,7 +36,7 @@ import com.vdurmont.emoji.EmojiParser;
 import scala.Tuple2;
 import utilities.Tweet;
 
-public class Analytics {
+public class Analytics  {
 
 	//Configurazione di Spark e Spark Streaming
 	private static JavaSparkContext jsc;
@@ -198,6 +198,7 @@ private static void setAllDictionaries() {
 					output.add("ERR");
 					return output.iterator();
 				}
+				
 				boolean like = false, sad = false, angry = false, hilarious = false, neutral = false;
 				boolean [] sentiments = {like, angry, sad, hilarious, neutral};
 				sentiments = checkEmojis(x, sentiments);
@@ -213,7 +214,7 @@ private static void setAllDictionaries() {
 	  };
 	  
 	  
-	//Verifica se un sentiment è stato trovato
+	  //Verifica se un sentiment è stato trovato
 		private static boolean checkSentiment(boolean [] sentiments){
 			int count = 0;
 			for(boolean b : sentiments){
@@ -251,7 +252,7 @@ private static void setAllDictionaries() {
 			if(sentiments[0] && sentiments[1])
 				return "angry";
 			if(sentiments[0] && sentiments[3])
-				return "hilarious";
+				return "like";
 			if(sentiments[0] && sentiments[2])
 				return "sad";
 			if(sentiments[2] && sentiments[3])
@@ -262,13 +263,14 @@ private static void setAllDictionaries() {
 				return "hilarious";
 			
 			return "ERR";
+		//	return "neutral";
 		}
 
 
 	public static boolean[] checkEmojis(Tuple2<String, String> x, boolean [] sentiments) {
-		String text = EmojiParser.parseToAliases(x._2);
+		String text = EmojiParser.parseToAliases(x._2).toLowerCase();
 		int count = 0;
-		for(String w : text.split(" ")){
+		for(String w : text.split("\\s+")){
 			if(w==null)
 				continue;
 			if(getEmojiLikeSet().contains(w) && !sentiments[0]){
@@ -293,7 +295,7 @@ private static void setAllDictionaries() {
 				
 		}
 		//Se il conteggio è maggiore di 3 o non è stato mai incrementato, avremo un sentiment neutrale
-		if(count>=3 || count==0)
+		if(count>=3)
 			sentiments[4]=true;
 		
 		return sentiments;
@@ -306,9 +308,11 @@ private static void setAllDictionaries() {
  private static boolean[] checkText(Tuple2<String, String> x, boolean[] sentiments){
 
   	int count = 0;
+  	String text = x._2.toLowerCase();
 		//Verifico lingua del tweet
-		if(x._1().equals("it")){
-			for(String w : x._2.split(" ")){
+		if(x._1.contains("it")){
+			for(String w : text.split("\\s+")){
+				
 				if(w==null)
 					continue;
 				
@@ -334,8 +338,8 @@ private static void setAllDictionaries() {
 					
 			}
 		}
-		if(x._1().equals("en")){
-			for(String w : x._2.split(" ")){
+		if(x._1.contains("en")){
+			for(String w : text.split("\\s+")){
 				if(w==null)
 					continue;
 				if(Analytics.getLikeENList().contains(w) && !sentiments[0]){
@@ -710,7 +714,7 @@ static VoidFunction<JavaPairRDD<Integer, String>> saveHashtagToDB = new VoidFunc
 	public void call(JavaPairRDD<Integer, String> t) throws Exception {
 		List<Tuple2<Integer, String>> htFreq = t.collect();
 		htFreq.forEach(x->{
-			cm.insertHashtag("hashtag", x._2, x._1);
+			cm.insertHashtag(x._2, x._1);
 		});
 		
 	}
@@ -755,6 +759,7 @@ private static void analyzeProcessedText() throws InterruptedException {
 
 
 private static void analyzeSentiment() throws InterruptedException{
+	
 	messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
 	sortedStream = messages.flatMap(sentimentFunc).mapToPair((x)->(new Tuple2<String, Integer>(x, 1))).reduceByKey(sumFunc).mapToPair(x->x.swap()).transformToPair(sortFunc);
 	sortedStream.print();

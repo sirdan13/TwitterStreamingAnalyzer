@@ -3,4 +3,4 @@ setMaster=local[*]
 zookeeper_server(s)=localhost:2181
 kafka_consumer_group=1
 thread(s)=3
-duration=15000
+duration=10000

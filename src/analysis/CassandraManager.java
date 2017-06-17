@@ -45,13 +45,13 @@ public class CassandraManager {
 	
 	public static void prepareStatements(){
 		
-		psInsertHashtag = session.prepare("INSERT INTO hashtags (id, type, text, frequence) VALUES (uuid(), ?, ?, ?)");
+		psInsertHashtag = session.prepare("INSERT INTO hashtags (id, text, frequence) VALUES (uuid(), ?, ?)");
 		bsInsertHashtag = new BoundStatement(psInsertHashtag);
 	}
 	
-	public void insertHashtag(String type, String hashtag, Integer freq){
+	public void insertHashtag(String hashtag, Integer freq){
 		
-		session.execute(bsInsertHashtag.bind(type, hashtag, freq));
+		session.execute(bsInsertHashtag.bind(hashtag, freq));
 	}
 
 }

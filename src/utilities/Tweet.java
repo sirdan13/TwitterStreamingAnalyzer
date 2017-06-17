@@ -64,7 +64,7 @@ public class Tweet implements Serializable {
 	
 	public void processText(){
 		//Rimuove il termine "RT" che indica il retweet
-		if(isRetweet())
+		if(isRetweet() && text.startsWith("RT @"))
 			processedText = text.substring(3);
 		else
 			processedText=text;

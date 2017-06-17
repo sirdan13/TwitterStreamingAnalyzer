@@ -2,6 +2,8 @@ package producer;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 import java.util.Scanner;
@@ -25,6 +27,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 import analysis.Analytics;
+import graphics.Graphics;
 import scala.Tuple2;
 
 
@@ -37,7 +40,9 @@ public class TwitterProducer {
 
 		long tempoInizioRun = System.currentTimeMillis();
 		String [] arguments = readTwitterAuth("config/credenziali_twitter.txt");
-		String [] keyWords = readKeywords("config/keywords.txt");
+	//	String [] keyWords = readKeywords("config/keywords.txt");
+		String [] keyWords = Graphics.insertKeywords();
+		
 		
 		ConfigurationBuilder cb = new ConfigurationBuilder();
 		cb.setDebugEnabled(true).setOAuthConsumerKey(arguments[0]).setOAuthConsumerSecret(arguments[1])
@@ -86,8 +91,9 @@ public class TwitterProducer {
 
 		twitterStream.addListener(listener);
 		FilterQuery query = new FilterQuery().track(keyWords);
-	//	query.language("it");
-		query.language("it", "en");
+		String [] lang = Graphics.insertLanguages();
+		query = importLanguageInQuery(query, lang);
+	//	query.language("it", "en");
 		twitterStream.filter(query);
 
 
@@ -139,9 +145,33 @@ public class TwitterProducer {
 				else{
 					t = new Tweet (ret.getId(), ret.getText(), ret.getCreatedAt(), ret.isRetweet(), ret.getRetweetedStatus().getText(), ret.getHashtagEntities(), ret.getUser());
 				}
+
+				String regex = "!?regex?!";
+				String tweetRecord;
+				/*
+				 * Compongo la stringa contenente le info dettagliate sul tweet
+				 */
+				if(ret.isRetweet()){
+					if(ret.getPlace()!=null)
+						tweetRecord = ret.getId()+regex+ret.getRetweetedStatus().getText()+regex+ret.getUser().getId()+regex+convertDate(ret.getCreatedAt())+regex+ret.isRetweet()+regex+ret.getPlace().getName()+regex+ret.getLang();
+					else
+						tweetRecord = ret.getId()+regex+ret.getRetweetedStatus().getText()+regex+ret.getUser().getId()+regex+convertDate(ret.getCreatedAt())+regex+ret.isRetweet()+regex+"null"+regex+ret.getLang();
+					}
+				
+				else{
+					if(ret.getPlace()!=null)
+						tweetRecord = ret.getId()+regex+ret.getText()+regex+ret.getUser().getId()+regex+convertDate(ret.getCreatedAt())+regex+ret.isRetweet()+regex+ret.getPlace().getName()+regex+ret.getLang();
+					else
+						tweetRecord = ret.getId()+regex+ret.getText()+regex+ret.getUser().getId()+regex+convertDate(ret.getCreatedAt())+regex+ret.isRetweet()+regex+"null"+regex+ret.getLang();
+					}
+						
+
+				//Invia i dati al topic "tweet"
+				producer.send(new ProducerRecord<String, String>("tweet", Integer.toString(j), tweetRecord));
+				/*
 				//Invia i dati al topic "original-text"
-				producer.send(new ProducerRecord<String, String>("original-text", Integer.toString(j), t.getText()));
-				//Invia i dati al topic "processed-text"
+				producer.send(new ProducerRecord<String, String>("original-text", Integer.toString(j), t.getText()));*/
+				//Invia i dati al topic "processed-text" (necessario per le analisi dei termini più citati)
 				producer.send(new ProducerRecord<String, String>("processed-text", Integer.toString(j), t.getProcessedText()));
 				//Invia i dati al topic "hashtags"
 				for(HashtagEntity ht : ret.getHashtagEntities())
@@ -150,10 +180,11 @@ public class TwitterProducer {
 				if(ret.getUserMentionEntities().length>0)
 					for(UserMentionEntity ue : ret.getUserMentionEntities())
 						producer.send(new ProducerRecord<String, String>("mentions", Integer.toString(k++), ue.getScreenName()));
-				producer.send(new ProducerRecord<String, String>("sentiment", ret.getLang(), ret.getText()));
+				producer.send(new ProducerRecord<String, String>("sentiment", ret.getLang(), t.getProcessedText()));
 				tlist.add(t);
 				nTweets++;
 				j++;
+				System.out.println(t.getProcessedText());
 			}
 			
 			
@@ -229,6 +260,65 @@ public class TwitterProducer {
 
 }
 	
+	private static String convertDate(Date date){
+		String converted = date.toString();
+		String output;
+		output = ""+converted.charAt(converted.length()-4)+converted.charAt(converted.length()-3)+converted.charAt(converted.length()-2)+converted.charAt(converted.length()-1);
+		output += "-";
+		if(converted.substring(4, 7).equals("Jan"))
+			output+="01";
+		if(converted.substring(4, 7).equals("Feb"))
+			output+="02";
+		if(converted.substring(4, 7).equals("Mar"))
+			output+="03";
+		if(converted.substring(4, 7).equals("Apr"))
+			output+="04";
+		if(converted.substring(4, 7).equals("May"))
+			output+="05";
+		if(converted.substring(4, 7).equals("Jun"))
+			output+="06";
+		if(converted.substring(4, 7).equals("Jul"))
+			output+="07";
+		if(converted.substring(4, 7).equals("Aug"))
+			output+="08";
+		if(converted.substring(4, 7).equals("Sep"))
+			output+="09";
+		if(converted.substring(4, 7).equals("Oct"))
+			output+="10";
+		if(converted.substring(4, 7).equals("Nov"))
+			output+="11";
+		if(converted.substring(4, 7).equals("Dec"))
+			output+="12";
+		output+="-";
+		output+=converted.substring(8, 10);
+		output+=" ";
+		output+=converted.substring(11, 19);
+		return output;
+	}
+	
+	private static FilterQuery importLanguageInQuery(FilterQuery query, String[] lang) {
+		if(lang.length==0)
+			return query.language();
+		if(lang.length==1)
+			return query.language(lang[0]);
+		if(lang.length==2)
+			return query.language(lang[0], lang[1]);
+		if(lang.length==3)
+			return query.language(lang[0], lang[1], lang[2]);
+		if(lang.length==4)
+			return query.language(lang[0], lang[1], lang[2], lang[3]);
+		if(lang.length==5)
+			return query.language(lang[0], lang[1], lang[2], lang[3], lang[4]);
+		if(lang.length==6)
+			return query.language(lang[0], lang[1], lang[2], lang[3], lang[4], lang[5]);
+		if(lang.length==7)
+			return query.language(lang[0], lang[1], lang[2], lang[3], lang[4], lang[5], lang[6]);
+		if(lang.length==8)
+			return query.language(lang[0], lang[1], lang[2], lang[3], lang[4], lang[5], lang[6], lang[7]);
+		return null;
+		
+	}
+
 	private static String[] readKeywords(String file) throws FileNotFoundException {
 		List<String> keywords = new ArrayList<String>();
 		Scanner sc = new Scanner(new File(file));
