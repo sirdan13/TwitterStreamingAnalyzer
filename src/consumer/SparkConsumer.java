@@ -4,9 +4,14 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.sql.SQLException;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
@@ -14,6 +19,8 @@ import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 
 import analysis.Analytics;
+import analysis.CassandraManager;
+
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
@@ -37,7 +44,7 @@ public class SparkConsumer {
 	static Map<String, Integer> topics;
 
 	
-	public static void main(String[] args) throws FileNotFoundException, InterruptedException, ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException {
+	public static void main(String[] args) throws FileNotFoundException, InterruptedException, ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, SQLException {
 		
     	/*
     	 * Imposto il Look and Feel per la grafica delle finestre interattive
@@ -67,7 +74,11 @@ public class SparkConsumer {
 		 * Creo un oggetto di classe Analytics, passandogli i parametri di Spark
 		 * e chiamo il suo metodo analyzeTopic, per analizzare il topic desiderato
 		 */
-		Analytics analytics = new Analytics(jssc, zookeeper_server, kafka_consumer_group, topics);
+		List<String> hosts = new ArrayList<String>();
+		hosts.add("marvel.sta.uniroma1.it");
+		hosts.add("gpu.sta.uniroma1.it");
+		CassandraManager cm = new CassandraManager(hosts, "gbd2017_lombardi", "scienzestatisiche");
+		Analytics analytics = new Analytics(jssc, zookeeper_server, kafka_consumer_group, topics, cm);
 		analytics.analyzeTopic(topic);
 
 	}
@@ -104,7 +115,7 @@ public class SparkConsumer {
 	}
 	
 	private static String chooseTopic(){
-		 String [] options = {"hashtags2", "mentions", "original-text", "processed-text", "sentiment"};
+		 String [] options = {"hashtags", "mentions", "original-text", "processed-text", "sentiment"};
 		 UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
 		 UIManager.put("Panel.background",new ColorUIResource(214,227,249));
 		 Dimension size = UIManager.getDimension("OptionPane.minimumSize");

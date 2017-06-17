@@ -1,6 +1,10 @@
 package analysis;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -22,6 +26,7 @@ import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
+import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.api.java.JavaPairDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka.KafkaUtils;
@@ -85,12 +90,24 @@ public class Analytics {
 	public static Set<String> emojiHilariousSet;
 	
 	
-	public Analytics(JavaStreamingContext jssc, String zookeeper_server, String kafka_consumer_group, Map<String, Integer> topics) throws FileNotFoundException{
+	public static CassandraManager cm;
+	
+	
+	public Analytics(JavaStreamingContext jssc, String zookeeper_server, String kafka_consumer_group, Map<String, Integer> topics) throws FileNotFoundException, SQLException{
 		Analytics.jssc=jssc;
 		Analytics.zookeeper_server=zookeeper_server;
 		Analytics.kafka_consumer_group=kafka_consumer_group;
 		Analytics.topics=topics;
 		leggiDizionari();
+	}
+	
+	public Analytics(JavaStreamingContext jssc, String zookeeper_server, String kafka_consumer_group, Map<String, Integer> topics, CassandraManager cm) throws FileNotFoundException, SQLException{
+		Analytics.jssc=jssc;
+		Analytics.zookeeper_server=zookeeper_server;
+		Analytics.kafka_consumer_group=kafka_consumer_group;
+		Analytics.topics=topics;
+		leggiDizionari();
+		Analytics.cm = cm;
 	}
 	
 	public static void init(){
@@ -188,7 +205,6 @@ private static void setAllDictionaries() {
 					output.add(setSentiment(sentiments));
 					return output.iterator();
 				}
-					
 				sentiments = checkText(x, sentiments);
 				output.add(setSentiment(sentiments));
 				return output.iterator();
@@ -675,14 +691,31 @@ static PairFlatMapFunction<List<String>, String, Integer> htExtractor = new Pair
 };
 
 
-private static void analyzeHashtags() throws InterruptedException {
+private static void analyzeHashtags() throws InterruptedException, SQLException {
 	messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
 	lines = messages.mapToPair((x)->(new Tuple2<String, Integer>(x._2, 1))).reduceByKey(sumFunc);
 	sortedStream = lines.mapToPair(x->x.swap()).transformToPair(sortFunc);
 	sortedStream.print();
+	sortedStream.foreachRDD(saveHashtagToDB);
 	jssc.start();
 	jssc.awaitTermination();
 }
+
+
+static VoidFunction<JavaPairRDD<Integer, String>> saveHashtagToDB = new VoidFunction<JavaPairRDD<Integer,String>>(){
+
+	private static final long serialVersionUID = 1L;
+
+	@Override
+	public void call(JavaPairRDD<Integer, String> t) throws Exception {
+		List<Tuple2<Integer, String>> htFreq = t.collect();
+		htFreq.forEach(x->{
+			cm.insertHashtag("hashtag", x._2, x._1);
+		});
+		
+	}
+	
+};
 
 
 
@@ -730,14 +763,14 @@ private static void analyzeSentiment() throws InterruptedException{
 }
 
 
-public void analyzeTopic(String topic) throws InterruptedException{
-	if(topic=="hashtags2")
+public void analyzeTopic(String topic) throws InterruptedException, SQLException{
+	if(topic=="hashtags")
 		analyzeHashtags();
-	if(topic=="mentions6")
+	if(topic=="mentions")
 		analyzeMentions();
-	if(topic=="original-text2")
+	if(topic=="original-text")
 		analyzeOriginalText();
-	if(topic=="processed-text2")
+	if(topic=="processed-text")
 		analyzeProcessedText();
 	if(topic=="sentiment")
 		analyzeSentiment();

@@ -13,6 +13,8 @@ import twitter4j.User;
 
 public class Tweet implements Serializable {
 	
+	private static final long serialVersionUID = 1L;
+	
 	private long tweet_id;
 	private String text;
 	private Date created_at;

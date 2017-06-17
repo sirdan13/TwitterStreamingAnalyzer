@@ -7,13 +7,16 @@ import java.util.Properties;
 import java.util.Scanner;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import twitter4j.*;
+
+import twitter4j.FilterQuery;
+import twitter4j.HashtagEntity;
 import twitter4j.StallWarning;
 import twitter4j.Status;
 import twitter4j.StatusDeletionNotice;
 import twitter4j.StatusListener;
 import twitter4j.TwitterStream;
 import twitter4j.TwitterStreamFactory;
+import twitter4j.UserMentionEntity;
 import twitter4j.conf.ConfigurationBuilder;
 import utilities.Tweet;
 
@@ -80,11 +83,8 @@ public class TwitterProducer {
 				ex.printStackTrace();
 			}
 		};
+
 		twitterStream.addListener(listener);
-	//	System.setProperty("file.encoding", "UTF8");
-		System.out.println(System.getProperty("file.encoding"));
-
-
 		FilterQuery query = new FilterQuery().track(keyWords);
 	//	query.language("it");
 		query.language("it", "en");
@@ -92,7 +92,10 @@ public class TwitterProducer {
 
 
 		Properties props = new Properties();
+		
+	//	Inserisco gli indirizzi dei nodi Kafka in funzione
 		props.put("metadata.broker.list", "localhost:2181");
+	//	Inserisco gl indirizzi dei nodi Zookeeper in funzione
 		props.put("bootstrap.servers", "localhost:9092");
 		props.put("acks", "all");
 		props.put("retries", 0);
@@ -100,11 +103,10 @@ public class TwitterProducer {
 		props.put("linger.ms", 1);
 		props.put("buffer.memory", 33554432);
 
+	//	Serializzo le chiavi e i valori per essere inviate sotto forma di array di byte
 		props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 		props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 		
-	//	props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-	//	props.put("value.serializer", "utilities.TweetSerializer");
 
 		Producer<String, String> producer = new KafkaProducer<String, String>(props);
 		int i = 0;
@@ -123,6 +125,7 @@ public class TwitterProducer {
 		int nTweets = 0;
 		int maxTweets = 0;
 		int minTweets = 100000;
+		int previousNTweets = 0;
 		 while (true) {
 			Status ret = queue.poll();
 			if (ret == null) {
@@ -137,46 +140,48 @@ public class TwitterProducer {
 					t = new Tweet (ret.getId(), ret.getText(), ret.getCreatedAt(), ret.isRetweet(), ret.getRetweetedStatus().getText(), ret.getHashtagEntities(), ret.getUser());
 				}
 				//Invia i dati al topic "original-text"
-				producer.send(new ProducerRecord<String, String>("original-text2", Integer.toString(j), t.getText()));
+				producer.send(new ProducerRecord<String, String>("original-text", Integer.toString(j), t.getText()));
 				//Invia i dati al topic "processed-text"
-				producer.send(new ProducerRecord<String, String>("processed-text2", Integer.toString(j), t.getProcessedText()));
+				producer.send(new ProducerRecord<String, String>("processed-text", Integer.toString(j), t.getProcessedText()));
 				//Invia i dati al topic "hashtags"
 				for(HashtagEntity ht : ret.getHashtagEntities())
-					producer.send(new ProducerRecord<String, String>("hashtags2", Integer.toString(i++), ht.getText().toLowerCase()));
+					producer.send(new ProducerRecord<String, String>("hashtags", Integer.toString(i++), ht.getText().toLowerCase()));
 				//Invia i dati al topic "mentions"
 				if(ret.getUserMentionEntities().length>0)
 					for(UserMentionEntity ue : ret.getUserMentionEntities())
-						producer.send(new ProducerRecord<String, String>("mentions6", Integer.toString(k++), ue.getScreenName()));
+						producer.send(new ProducerRecord<String, String>("mentions", Integer.toString(k++), ue.getScreenName()));
 				producer.send(new ProducerRecord<String, String>("sentiment", ret.getLang(), ret.getText()));
 				tlist.add(t);
+				nTweets++;
 				j++;
 			}
 			
 			
 		 long timeY = System.currentTimeMillis();
 		 long updateTime = 20000;
-		 int nTweetsPeriodo = tlist.size()-nTweets;
-		 if(timeY-timeX>=updateTime && nTweetsPeriodo>10){
+//		 int nTweetsPeriodo = tlist.size()-nTweets;
+		 int currentNTweets = nTweets-previousNTweets;
+		 if(timeY-timeX>=updateTime && currentNTweets>10){
 			 System.out.println("******************");
 			 System.out.println("STATISTICS");
 			 System.out.println("******************");
 			 System.out.println();
 			 List<Tuple2<Integer, String>> htFrequencies = Analytics.countHashtag(tlist);
-			 System.out.println("Tweet ricevuti dall'inizio: "+tlist.size());
-			 System.out.println("Tweet ricevuti in questo periodo: "+(nTweetsPeriodo));
-			 if((nTweetsPeriodo)>maxTweets){
-				 maxTweets = (nTweetsPeriodo);
+			 System.out.println("Tweet ricevuti dall'inizio: "+nTweets);
+			 System.out.println("Tweet ricevuti in questo periodo: "+(currentNTweets));
+			 if((currentNTweets)>maxTweets){
+				 maxTweets = (currentNTweets);
 				 System.out.println("Nuovo record di tweet ricevuti in un solo periodo");
 			 }
 			 else
 				 System.out.println("Record attuale di tweet ricevuti in un solo periodo: "+maxTweets);
-			 if((nTweetsPeriodo)<minTweets){
-				 minTweets=(nTweetsPeriodo);
-				 System.out.println("Record negativo di tweet ricevuti in un solo periodo");
+			 if((currentNTweets)<minTweets){
+				 minTweets=(currentNTweets);
+				 System.out.println("Nuovo record negativo di tweet ricevuti in un solo periodo");
 			 }
 			 else
 				 System.out.println("Record negativo attuale di tweet ricevuti in un solo periodo: "+minTweets);
-			 double ritmo = (double) (nTweetsPeriodo)/((updateTime)/1000.0);
+			 double ritmo = (double) (currentNTweets)/((updateTime)/1000.0);
 			 ritmo = round(ritmo, 2);
 			 System.out.println("Ritmo di acquisizione: "+ritmo+" T/s");
 			 if(vecchioRitmo>ritmo)
@@ -206,7 +211,9 @@ public class TwitterProducer {
 				 System.out.println("L'hashtag #"+ht._2+" e' stato citato\t"+ht._1+" volte.");
 			 timeX=System.currentTimeMillis();
 			 stampato=false;
-			 nTweets = tlist.size();
+		//	 nTweets = tlist.size();
+		//	 tweetPeriodo = nTweets;
+			 previousNTweets = nTweets;
 		 }
 		 
 	
@@ -222,13 +229,6 @@ public class TwitterProducer {
 
 }
 	
-	private static String readTopic(String file) throws FileNotFoundException {
-		Scanner sc = new Scanner(new File(file));
-		String topic = sc.nextLine();
-		sc.close();
-		return topic;
-	}
-
 	private static String[] readKeywords(String file) throws FileNotFoundException {
 		List<String> keywords = new ArrayList<String>();
 		Scanner sc = new Scanner(new File(file));
@@ -260,9 +260,6 @@ public class TwitterProducer {
 	    return (double) tmp / factor;
 	}
 	
-	//TODO implementare metodo che debba essere chiamato una sola volta (all'inizio del main) e che carichi la lista delle stopwords
-		public static void loadStopWords(String file){
-			
-		}
+
 	
 }
