@@ -28,6 +28,10 @@ public class CassandraManager {
 	static PreparedStatement psInsertTweet;
 	static BoundStatement bsInsertSentiment;
 	static PreparedStatement psInsertSentiment;
+	static BoundStatement bsInsertTopword;
+	static PreparedStatement psInsertTopword;
+	static BoundStatement bsInsertMentions;
+	static PreparedStatement psInsertMentions;
 	
 	
 	public CassandraManager(List<String> contactPoints, String user, String password){
@@ -61,6 +65,12 @@ public class CassandraManager {
 		
 		psInsertSentiment = session.prepare("insert into sentiment(created_at, like, angry, hilarious, sad, neutral, topic) values (?, ?, ?, ?, ?, ?, ?)");
 		bsInsertSentiment = new BoundStatement(psInsertSentiment);
+		
+		psInsertTopword = session.prepare("INSERT INTO topwords (created_at, text, frequence, topic) VALUES (?, ?, ?, ?)");
+		bsInsertTopword = new BoundStatement(psInsertTopword);
+		
+		psInsertMentions = session.prepare("INSERT INTO mentions (created_at, user, frequence, topic) VALUES (?, ?, ?, ?)");
+		bsInsertMentions = new BoundStatement(psInsertMentions);
 	}
 	
 	public void insertHashtag(String hashtag, Integer freq){
@@ -81,7 +91,13 @@ public void insertSentiment(double like, double angry, double hilarious, double 
 		session.execute(bsInsertSentiment.bind(DateManager.getDate(), like, angry, hilarious, sad, neutral, topic));
 	}
 
+public void insertTopword(String word, Integer frequence, String topic) {
+	session.execute(bsInsertTopword.bind(DateManager.getDate(), word, frequence, topic));
+}
 
+public void insertMention(String user_name, Integer frequence) {
+	session.execute(bsInsertMentions.bind(DateManager.getDate(), user_name.split(";")[0], frequence, user_name.split(";")[1]));
+}
 
 
 }

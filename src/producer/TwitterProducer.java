@@ -178,14 +178,14 @@ public class TwitterProducer {
 				//Invia i dati al topic "original-text"
 				producer.send(new ProducerRecord<String, String>("original-text", Integer.toString(j), t.getText()));*/
 				//Invia i dati al topic "processed-text" (necessario per le analisi dei termini più citati)
-				producer.send(new ProducerRecord<String, String>("processed-text", Integer.toString(j), t.getProcessedText()));
+				producer.send(new ProducerRecord<String, String>("top-words", Integer.toString(j), t.getProcessedText()+";"+topic));
 				//Invia i dati al topic "hashtags"
 				for(HashtagEntity ht : ret.getHashtagEntities())
 					producer.send(new ProducerRecord<String, String>("hashtags", Integer.toString(i++), ht.getText().toLowerCase()+";"+topic));
 				//Invia i dati al topic "mentions"
 				if(ret.getUserMentionEntities().length>0)
 					for(UserMentionEntity ue : ret.getUserMentionEntities())
-						producer.send(new ProducerRecord<String, String>("mentions", Integer.toString(k++), ue.getScreenName()));
+						producer.send(new ProducerRecord<String, String>("mentions", Integer.toString(k++), ue.getScreenName()+";"+topic));
 				producer.send(new ProducerRecord<String, String>("sentiment", ret.getLang(), t.getProcessedText()+";"+topic));
 				tlist.add(t);
 				nTweets++;

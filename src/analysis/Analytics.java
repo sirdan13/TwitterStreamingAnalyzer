@@ -89,6 +89,7 @@ public class Analytics  {
 	
 	public static CassandraManager cm;
 	public static String topicSentiment;
+	public static String topicTopword;
 	
 	
 	public Analytics(JavaStreamingContext jssc, String zookeeper_server, String kafka_consumer_group, Map<String, Integer> topics) throws FileNotFoundException, SQLException{
@@ -395,13 +396,14 @@ private static void setAllDictionaries() {
 	@Override
 	 public Iterator<String> call(Tuple2<String,String> x) throws Exception {
 	            List<String> output = new ArrayList<String>();
+	            topicTopword = x._2.split(";")[1];
+	            String text = x._2.split(";")[0];
 	            if(x._2.length()==0)
 	            	output.add("ERR");
-	            for(String w : x._2().split(" "))
+	            for(String w : text.split(" "))
 	            	output.add(w);
 	            return output.iterator();
 	            }
-	
 	
 	};
 
@@ -696,7 +698,8 @@ static PairFlatMapFunction<List<String>, String, Integer> htExtractor = new Pair
 private static void analyzeHashtags() throws InterruptedException, SQLException {
 	messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
 	lines = messages.mapToPair((x)->(new Tuple2<String, Integer>(x._2, 1))).reduceByKey(sumFunc);
-	sortedStream = lines.mapToPair(x->x.swap()).transformToPair(sortFunc);
+//	sortedStream = lines.mapToPair(x->x.swap()).transformToPair(sortFunc);
+	sortedStream = lines.mapToPair(x->x.swap());
 	sortedStream.print();
 	sortedStream.foreachRDD(saveHashtagToDB);
 	jssc.start();
@@ -724,27 +727,54 @@ static VoidFunction<JavaPairRDD<Integer, String>> saveHashtagToDB = new VoidFunc
 private static void analyzeMentions() throws InterruptedException {
 	messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
 	lines = messages.mapToPair((x)->(new Tuple2<String, Integer>(x._2, 1))).reduceByKey(sumFunc);
-	sortedStream = lines.mapToPair(x->x.swap()).transformToPair(sortFunc);
+//	sortedStream = lines.mapToPair(x->x.swap()).transformToPair(sortFunc);
+	sortedStream = lines.mapToPair(x->x.swap());
+	sortedStream.foreachRDD(saveMentionsToDB);
 	sortedStream.print();
 	jssc.start();
 	jssc.awaitTermination();
 	
 }
 
+static VoidFunction<JavaPairRDD<Integer, String>> saveMentionsToDB = new VoidFunction<JavaPairRDD<Integer, String>>(){
 
+	private static final long serialVersionUID = 1L;
 
-private static void analyzeOriginalText() throws InterruptedException {
+	@Override
+	public void call(JavaPairRDD<Integer, String> rdd) throws Exception {
+		rdd.foreach(x->{
+			cm.insertMention(x._2, x._1);
+		});
+		
+	}
+	
+};
+
+private static void analyzeTopwords() throws InterruptedException {
 	messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
 	JavaPairDStream<String, Integer> words = messages.flatMap(wordFunc).mapToPair((x)->(new Tuple2<String, Integer>(x, 1))).reduceByKey(sumFunc);
-	sortedStream = words.mapToPair(x->x.swap()).transformToPair(sortFunc);
-	sortedStream.print();
+//	sortedStream = words.mapToPair(x->x.swap()).transformToPair(sortFunc);
+	words.foreachRDD(saveTopwordsToDB);
+	words.print();
 	jssc.start();
 	jssc.awaitTermination();
 	
 }
 
 
+public static VoidFunction<JavaPairRDD<String, Integer>> saveTopwordsToDB = new VoidFunction<JavaPairRDD<String, Integer>>(){
 
+	private static final long serialVersionUID = 1L;
+
+	@Override
+	public void call(JavaPairRDD<String, Integer> rdd) throws Exception {
+		rdd.foreach(x->{
+				cm.insertTopword(x._1, x._2, topicTopword);
+				});
+	}
+	
+};
+/*
 private static void analyzeProcessedText() throws InterruptedException {
 	messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
 	JavaPairDStream<String, Integer> words = messages.flatMap(wordFunc).mapToPair((x)->(new Tuple2<String, Integer>(x, 1))).reduceByKey(sumFunc);
@@ -753,7 +783,7 @@ private static void analyzeProcessedText() throws InterruptedException {
 	jssc.start();
 	jssc.awaitTermination();
 }
-
+*/
 static VoidFunction<JavaPairRDD<Integer, String>> saveSentimentToDB = new VoidFunction<JavaPairRDD<Integer, String>>(){
 	
 	private static final long serialVersionUID = 1L;
@@ -800,7 +830,8 @@ public static double round(double value, int places) {
 private static void analyzeSentiment() throws InterruptedException{
 	
 	messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
-	sortedStream = messages.flatMap(sentimentFunc).mapToPair((x)->(new Tuple2<String, Integer>(x, 1))).reduceByKey(sumFunc).mapToPair(x->x.swap()).transformToPair(sortFunc);
+//	sortedStream = messages.flatMap(sentimentFunc).mapToPair((x)->(new Tuple2<String, Integer>(x, 1))).reduceByKey(sumFunc).mapToPair(x->x.swap()).transformToPair(sortFunc);
+	sortedStream = messages.flatMap(sentimentFunc).mapToPair((x)->(new Tuple2<String, Integer>(x, 1))).reduceByKey(sumFunc).mapToPair(x->x.swap());
 	sortedStream.foreachRDD(saveSentimentToDB);
 	sortedStream.print();
 	jssc.start();
@@ -813,10 +844,10 @@ public void analyzeTopic(String topic) throws InterruptedException, SQLException
 		analyzeHashtags();
 	if(topic=="mentions")
 		analyzeMentions();
-	if(topic=="original-text")
-		analyzeOriginalText();
-	if(topic=="processed-text")
-		analyzeProcessedText();
+/*	if(topic=="original-text")
+		analyzeOriginalText();*/
+	if(topic=="top-words")
+		analyzeTopwords();
 	if(topic=="sentiment")
 		analyzeSentiment();
 	if(topic=="tweet")
