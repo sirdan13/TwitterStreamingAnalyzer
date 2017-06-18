@@ -2,7 +2,6 @@ package producer;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
@@ -39,10 +38,9 @@ public class TwitterProducer {
 		final LinkedBlockingQueue<Status> queue = new LinkedBlockingQueue<Status>(1000);
 
 		long tempoInizioRun = System.currentTimeMillis();
-		String [] arguments = readTwitterAuth("config/credenziali_twitter.txt");
-	//	String [] keyWords = readKeywords("config/keywords.txt");
-		String [] keyWords = Graphics.insertKeywords();
-		
+		Graphics.setLF("Windows");
+		String [] arguments  = Graphics.readTwitterAuth();
+
 		
 		ConfigurationBuilder cb = new ConfigurationBuilder();
 		cb.setDebugEnabled(true).setOAuthConsumerKey(arguments[0]).setOAuthConsumerSecret(arguments[1])
@@ -89,19 +87,36 @@ public class TwitterProducer {
 			}
 		};
 
+		FilterQuery query = new FilterQuery();
+		
+		List<Object> params = Graphics.insertMultipleValues();
+		String [] lang = (String[]) params.get(1);
+		String [] keyWords = (String[]) params.get(0);
+		String topic = (String) params.get(2);
+		query.track(keyWords);
+		query = importLanguagesInQuery(query, lang);
+		
 		twitterStream.addListener(listener);
-		FilterQuery query = new FilterQuery().track(keyWords);
-		String [] lang = Graphics.insertLanguages();
-		query = importLanguageInQuery(query, lang);
+		
 	//	query.language("it", "en");
 		twitterStream.filter(query);
-
-
+		
 		Properties props = new Properties();
 		
-	//	Inserisco gli indirizzi dei nodi Kafka in funzione
+		/*
+		 * Inserisco le proprietà necessarie nell'oggetto props:
+		 * - metadata.broker.list:	lista dei nodi su cui lavora Kafka
+		 * - bootstrap.servers: 	lista dei nodi su cui lavora Zookeeper (entrambi lavorano in locale in questo caso)
+		 * - acks: 					configurazione che stabilisce secondo quale criterio le richieste sono considerate complete
+		 * - retries: 				numero di tentativi permessi al producer quando vi sono fallimenti (ripetizioni possono creare messaggi duplicati)
+		 * - batch.size:			ampiezza dei batch contenenti record pronti per essere inviati, ma ancora non inviati
+		 * - linger.ms:				millisecondi di ritardo che vengono concessi al producer prima di inviare il contenuto del buffer (con zero si invia tutto immediatamente)
+		 * - buffer.memory:			memoria totale concessa al producer per le operazioni di buffering
+		 * - key.serializer:		scelta del serializzatore che invia i dati K (chiave) sotto forma di array di byte
+		 * - value.serializer:		scelta del serializzatore che invia i dati V (valore) sotto forma di array di byte
+		 */
+		
 		props.put("metadata.broker.list", "localhost:2181");
-	//	Inserisco gl indirizzi dei nodi Zookeeper in funzione
 		props.put("bootstrap.servers", "localhost:9092");
 		props.put("acks", "all");
 		props.put("retries", 0);
@@ -109,7 +124,7 @@ public class TwitterProducer {
 		props.put("linger.ms", 1);
 		props.put("buffer.memory", 33554432);
 
-	//	Serializzo le chiavi e i valori per essere inviate sotto forma di array di byte
+	
 		props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 		props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 		
@@ -118,7 +133,6 @@ public class TwitterProducer {
 		int i = 0;
 		int j = 0;
 		int k = 0;
-		int q = 0;
 
 		Analytics.init();
 		 
@@ -146,23 +160,23 @@ public class TwitterProducer {
 					t = new Tweet (ret.getId(), ret.getText(), ret.getCreatedAt(), ret.isRetweet(), ret.getRetweetedStatus().getText(), ret.getHashtagEntities(), ret.getUser());
 				}
 
-				String regex = "!?regex?!";
+				String regex = "£&€";
 				String tweetRecord;
 				/*
 				 * Compongo la stringa contenente le info dettagliate sul tweet
 				 */
 				if(ret.isRetweet()){
 					if(ret.getPlace()!=null)
-						tweetRecord = ret.getId()+regex+ret.getRetweetedStatus().getText()+regex+ret.getUser().getId()+regex+convertDate(ret.getCreatedAt())+regex+ret.isRetweet()+regex+ret.getPlace().getName()+regex+ret.getLang();
+						tweetRecord = ret.getId()+regex+ret.getRetweetedStatus().getText()+regex+ret.getUser().getId()+regex+convertDate(ret.getCreatedAt())+regex+ret.isRetweet()+regex+ret.getPlace().getName()+regex+ret.getLang()+regex+topic;
 					else
-						tweetRecord = ret.getId()+regex+ret.getRetweetedStatus().getText()+regex+ret.getUser().getId()+regex+convertDate(ret.getCreatedAt())+regex+ret.isRetweet()+regex+"null"+regex+ret.getLang();
+						tweetRecord = ret.getId()+regex+ret.getRetweetedStatus().getText()+regex+ret.getUser().getId()+regex+convertDate(ret.getCreatedAt())+regex+ret.isRetweet()+regex+"null"+regex+ret.getLang()+regex+topic;
 					}
 				
 				else{
 					if(ret.getPlace()!=null)
-						tweetRecord = ret.getId()+regex+ret.getText()+regex+ret.getUser().getId()+regex+convertDate(ret.getCreatedAt())+regex+ret.isRetweet()+regex+ret.getPlace().getName()+regex+ret.getLang();
+						tweetRecord = ret.getId()+regex+ret.getText()+regex+ret.getUser().getId()+regex+convertDate(ret.getCreatedAt())+regex+ret.isRetweet()+regex+ret.getPlace().getName()+regex+ret.getLang()+regex+topic;
 					else
-						tweetRecord = ret.getId()+regex+ret.getText()+regex+ret.getUser().getId()+regex+convertDate(ret.getCreatedAt())+regex+ret.isRetweet()+regex+"null"+regex+ret.getLang();
+						tweetRecord = ret.getId()+regex+ret.getText()+regex+ret.getUser().getId()+regex+convertDate(ret.getCreatedAt())+regex+ret.isRetweet()+regex+"null"+regex+ret.getLang()+regex+topic;
 					}
 						
 
@@ -184,7 +198,6 @@ public class TwitterProducer {
 				tlist.add(t);
 				nTweets++;
 				j++;
-				System.out.println(t.getProcessedText());
 			}
 			
 			
@@ -296,7 +309,7 @@ public class TwitterProducer {
 		return output;
 	}
 	
-	private static FilterQuery importLanguageInQuery(FilterQuery query, String[] lang) {
+	private static FilterQuery importLanguagesInQuery(FilterQuery query, String[] lang) {
 		if(lang.length==0)
 			return query.language();
 		if(lang.length==1)
@@ -319,6 +332,8 @@ public class TwitterProducer {
 		
 	}
 
+	
+	@SuppressWarnings("unused")
 	private static String[] readKeywords(String file) throws FileNotFoundException {
 		List<String> keywords = new ArrayList<String>();
 		Scanner sc = new Scanner(new File(file));

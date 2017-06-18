@@ -779,7 +779,37 @@ public void analyzeTopic(String topic) throws InterruptedException, SQLException
 		analyzeProcessedText();
 	if(topic=="sentiment")
 		analyzeSentiment();
+	if(topic=="tweet")
+		analyzeTweet();
 }
+
+private void analyzeTweet() throws InterruptedException {
+	messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
+	
+	messages.foreachRDD(saveTweetToDB);
+	messages.print();
+	jssc.start();
+	jssc.awaitTermination();
+	
+}
+
+VoidFunction<JavaPairRDD<String, String>> saveTweetToDB = new VoidFunction<JavaPairRDD<String, String>>(){
+
+	private static final long serialVersionUID = 1L;
+
+	@Override
+	public void call(JavaPairRDD<String, String> t) throws Exception {
+
+		List<Tuple2<String, String>> tweets = t.collect();
+		tweets.forEach(x->{
+			String [] scomposto = x._2.split("£&€");
+			if(scomposto.length>0)
+				cm.insertTweet(scomposto[0], scomposto[1], scomposto[2], scomposto[3], scomposto[4], scomposto[5], scomposto[6], scomposto[7]);
+		});
+		
+	}
+	
+};
 	
 	
 

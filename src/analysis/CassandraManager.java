@@ -21,6 +21,8 @@ public class CassandraManager {
 	static BoundStatement bsInserTText;
 	static PreparedStatement psInsertText;
 	static PreparedStatement psInsertHashtag;
+	static BoundStatement bsInsertTweet;
+	static PreparedStatement psInsertTweet;
 	
 	
 //	PreparedStatement psSelezionaTraccia = s.prepare(cql);
@@ -47,11 +49,19 @@ public class CassandraManager {
 		
 		psInsertHashtag = session.prepare("INSERT INTO hashtags (id, text, frequence) VALUES (uuid(), ?, ?)");
 		bsInsertHashtag = new BoundStatement(psInsertHashtag);
+		
+		psInsertTweet = session.prepare("INSERT INTO tweet (id, tweet_id, text, user_id, created_at, retweet, location, lang, topic) VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?, ?)");
+		bsInsertTweet = new BoundStatement(psInsertTweet);
 	}
 	
 	public void insertHashtag(String hashtag, Integer freq){
 		
 		session.execute(bsInsertHashtag.bind(hashtag, freq));
+	}
+	
+public void insertTweet(String tweet_id, String text, String user_id, String created_at, String retweet, String location, String language, String topic){
+		
+		session.execute(bsInsertTweet.bind(tweet_id, text, user_id, created_at, retweet, location, language, topic));
 	}
 
 }
