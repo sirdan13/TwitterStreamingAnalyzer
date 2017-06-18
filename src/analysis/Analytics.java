@@ -1,10 +1,7 @@
 package analysis;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -91,6 +88,7 @@ public class Analytics  {
 	
 	
 	public static CassandraManager cm;
+	public static String topicSentiment;
 	
 	
 	public Analytics(JavaStreamingContext jssc, String zookeeper_server, String kafka_consumer_group, Map<String, Integer> topics) throws FileNotFoundException, SQLException{
@@ -198,7 +196,7 @@ private static void setAllDictionaries() {
 					output.add("ERR");
 					return output.iterator();
 				}
-				
+				topicSentiment = x._2.split(";")[1];
 				boolean like = false, sad = false, angry = false, hilarious = false, neutral = false;
 				boolean [] sentiments = {like, angry, sad, hilarious, neutral};
 				sentiments = checkEmojis(x, sentiments);
@@ -268,7 +266,7 @@ private static void setAllDictionaries() {
 
 
 	public static boolean[] checkEmojis(Tuple2<String, String> x, boolean [] sentiments) {
-		String text = EmojiParser.parseToAliases(x._2).toLowerCase();
+		String text = EmojiParser.parseToAliases(x._2).toLowerCase().split(";")[0];
 		int count = 0;
 		for(String w : text.split("\\s+")){
 			if(w==null)
@@ -308,7 +306,7 @@ private static void setAllDictionaries() {
  private static boolean[] checkText(Tuple2<String, String> x, boolean[] sentiments){
 
   	int count = 0;
-  	String text = x._2.toLowerCase();
+  	String text = x._2.toLowerCase().split(";")[0];
 		//Verifico lingua del tweet
 		if(x._1.contains("it")){
 			for(String w : text.split("\\s+")){
@@ -756,12 +754,54 @@ private static void analyzeProcessedText() throws InterruptedException {
 	jssc.awaitTermination();
 }
 
+static VoidFunction<JavaPairRDD<Integer, String>> saveSentimentToDB = new VoidFunction<JavaPairRDD<Integer, String>>(){
+	
+	private static final long serialVersionUID = 1L;
 
+	@Override
+	public void call(JavaPairRDD<Integer, String> rdd) throws Exception {
+		List<Tuple2<Integer, String>> sentiment = rdd.collect();
+		double like = 0, sad = 0, hilarious = 0, angry = 0, tot;
+		int neutral = 0;
+		for(Tuple2<Integer, String> i : sentiment){
+			if(i._2.equals("like"))
+				like=i._1;
+			if(i._2.equals("angry"))
+				angry=i._1;
+			if(i._2.equals("hilarious"))
+				hilarious=i._1;
+			if(i._2.equals("sad"))
+				sad=i._1;
+			if(i._2.equals("neutral"))
+				neutral=i._1;
+		}
+		
+		tot = like+angry+hilarious+sad;
+		like = like/tot*100;
+		angry = angry/tot*100;
+		hilarious = hilarious/tot*100;
+		sad = sad/tot*100;
+		
+		cm.insertSentiment(round(like, 2), round(angry, 2), round(hilarious, 2), round(sad, 2), neutral, topicSentiment);
+			
+	}
+	
+};
+
+public static double round(double value, int places) {
+    if (places < 0) throw new IllegalArgumentException();
+
+    long factor = (long) Math.pow(10, places);
+    value = value * factor;
+    long tmp = Math.round(value);
+    return (double) tmp / factor;
+}
 
 private static void analyzeSentiment() throws InterruptedException{
 	
 	messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
 	sortedStream = messages.flatMap(sentimentFunc).mapToPair((x)->(new Tuple2<String, Integer>(x, 1))).reduceByKey(sumFunc).mapToPair(x->x.swap()).transformToPair(sortFunc);
+	sortedStream.foreachRDD(saveSentimentToDB);
 	sortedStream.print();
 	jssc.start();
 	jssc.awaitTermination();
@@ -785,7 +825,6 @@ public void analyzeTopic(String topic) throws InterruptedException, SQLException
 
 private void analyzeTweet() throws InterruptedException {
 	messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
-	
 	messages.foreachRDD(saveTweetToDB);
 	messages.print();
 	jssc.start();
@@ -800,11 +839,11 @@ VoidFunction<JavaPairRDD<String, String>> saveTweetToDB = new VoidFunction<JavaP
 	@Override
 	public void call(JavaPairRDD<String, String> t) throws Exception {
 
-		List<Tuple2<String, String>> tweets = t.collect();
-		tweets.forEach(x->{
+	//	List<Tuple2<String, String>> tweets = t.collect();
+		t.foreach(x->{
 			String [] scomposto = x._2.split("£&€");
 			if(scomposto.length>0)
-				cm.insertTweet(scomposto[0], scomposto[1], scomposto[2], scomposto[3], scomposto[4], scomposto[5], scomposto[6], scomposto[7]);
+				cm.insertTweet(scomposto[0], scomposto[1], scomposto[2], scomposto[3]);
 		});
 		
 	}

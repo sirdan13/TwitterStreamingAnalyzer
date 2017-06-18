@@ -19,6 +19,7 @@ import twitter4j.TwitterStream;
 import twitter4j.TwitterStreamFactory;
 import twitter4j.UserMentionEntity;
 import twitter4j.conf.ConfigurationBuilder;
+import utilities.DateManager;
 import utilities.Tweet;
 
 import org.apache.kafka.clients.producer.Producer;
@@ -121,7 +122,7 @@ public class TwitterProducer {
 		props.put("acks", "all");
 		props.put("retries", 0);
 		props.put("batch.size", 16384);
-		props.put("linger.ms", 1);
+		props.put("linger.ms", 20);
 		props.put("buffer.memory", 33554432);
 
 	
@@ -165,21 +166,12 @@ public class TwitterProducer {
 				/*
 				 * Compongo la stringa contenente le info dettagliate sul tweet
 				 */
-				if(ret.isRetweet()){
-					if(ret.getPlace()!=null)
-						tweetRecord = ret.getId()+regex+ret.getRetweetedStatus().getText()+regex+ret.getUser().getId()+regex+convertDate(ret.getCreatedAt())+regex+ret.isRetweet()+regex+ret.getPlace().getName()+regex+ret.getLang()+regex+topic;
-					else
-						tweetRecord = ret.getId()+regex+ret.getRetweetedStatus().getText()+regex+ret.getUser().getId()+regex+convertDate(ret.getCreatedAt())+regex+ret.isRetweet()+regex+"null"+regex+ret.getLang()+regex+topic;
-					}
+				if(ret.isRetweet())
+					tweetRecord = ret.getRetweetedStatus().getText()+regex+DateManager.getDate()+regex+ret.getUser().getScreenName()+regex+topic;
 				
-				else{
-					if(ret.getPlace()!=null)
-						tweetRecord = ret.getId()+regex+ret.getText()+regex+ret.getUser().getId()+regex+convertDate(ret.getCreatedAt())+regex+ret.isRetweet()+regex+ret.getPlace().getName()+regex+ret.getLang()+regex+topic;
-					else
-						tweetRecord = ret.getId()+regex+ret.getText()+regex+ret.getUser().getId()+regex+convertDate(ret.getCreatedAt())+regex+ret.isRetweet()+regex+"null"+regex+ret.getLang()+regex+topic;
-					}
-						
-
+				else
+					tweetRecord = ret.getText()+regex+DateManager.getDate()+regex+ret.getUser().getScreenName()+regex+topic;
+				
 				//Invia i dati al topic "tweet"
 				producer.send(new ProducerRecord<String, String>("tweet", Integer.toString(j), tweetRecord));
 				/*
@@ -189,12 +181,12 @@ public class TwitterProducer {
 				producer.send(new ProducerRecord<String, String>("processed-text", Integer.toString(j), t.getProcessedText()));
 				//Invia i dati al topic "hashtags"
 				for(HashtagEntity ht : ret.getHashtagEntities())
-					producer.send(new ProducerRecord<String, String>("hashtags", Integer.toString(i++), ht.getText().toLowerCase()));
+					producer.send(new ProducerRecord<String, String>("hashtags", Integer.toString(i++), ht.getText().toLowerCase()+";"+topic));
 				//Invia i dati al topic "mentions"
 				if(ret.getUserMentionEntities().length>0)
 					for(UserMentionEntity ue : ret.getUserMentionEntities())
 						producer.send(new ProducerRecord<String, String>("mentions", Integer.toString(k++), ue.getScreenName()));
-				producer.send(new ProducerRecord<String, String>("sentiment", ret.getLang(), t.getProcessedText()));
+				producer.send(new ProducerRecord<String, String>("sentiment", ret.getLang(), t.getProcessedText()+";"+topic));
 				tlist.add(t);
 				nTweets++;
 				j++;
@@ -273,7 +265,7 @@ public class TwitterProducer {
 
 }
 	
-	private static String convertDate(Date date){
+	public static String convertDate(Date date){
 		String converted = date.toString();
 		String output;
 		output = ""+converted.charAt(converted.length()-4)+converted.charAt(converted.length()-3)+converted.charAt(converted.length()-2)+converted.charAt(converted.length()-1);

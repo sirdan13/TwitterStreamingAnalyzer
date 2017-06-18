@@ -8,7 +8,6 @@ import java.sql.SQLException;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 

@@ -5,6 +5,9 @@ import java.util.List;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Cluster.Builder;
+
+import utilities.DateManager;
+
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 
@@ -23,18 +26,9 @@ public class CassandraManager {
 	static PreparedStatement psInsertHashtag;
 	static BoundStatement bsInsertTweet;
 	static PreparedStatement psInsertTweet;
+	static BoundStatement bsInsertSentiment;
+	static PreparedStatement psInsertSentiment;
 	
-	
-//	PreparedStatement psSelezionaTraccia = s.prepare(cql);
-//	BoundStatement bsSelezionaTraccia = new BoundStatement(psSelezionaTraccia);
-	
-	public CassandraManager(String contactPoint, String user, String password){
-		builder = Cluster.builder().withCredentials(user, password);
-		builder.addContactPoint(contactPoint).addContactPoint("gpu.sta.uniroma1.it");
-		cluster=CassandraManager.builder.build();
-		session= cluster.connect(user);
-		prepareStatements();
-	}
 	
 	public CassandraManager(List<String> contactPoints, String user, String password){
 		builder = Cluster.builder().withCredentials(user, password);
@@ -45,23 +39,49 @@ public class CassandraManager {
 		prepareStatements();
 	}
 	
+	public CassandraManager(String contactPoint, String user, String password){
+		builder = Cluster.builder().withCredentials(user, password);
+		builder.addContactPoint(contactPoint);
+		cluster=CassandraManager.builder.build();
+		session= cluster.connect(user);
+		prepareStatements();
+	}
+	
+	
+	
 	public static void prepareStatements(){
 		
-		psInsertHashtag = session.prepare("INSERT INTO hashtags (id, text, frequence) VALUES (uuid(), ?, ?)");
+		psInsertHashtag = session.prepare("INSERT INTO hashtags (created_at, text, frequence, topic) VALUES (?, ?, ?, ?)");
 		bsInsertHashtag = new BoundStatement(psInsertHashtag);
 		
-		psInsertTweet = session.prepare("INSERT INTO tweet (id, tweet_id, text, user_id, created_at, retweet, location, lang, topic) VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?, ?)");
+	//	psInsertTweet = session.prepare("INSERT INTO tweet (tweet_id, text, user_id, created_at, lang, topic) VALUES (?, ?, ?, ?, ?, ?)");
+	//	psInsertTweet = session.prepare("INSERT INTO tweet (tweet_id, text, user_id, created_at, topic) VALUES (?, ?, ?, ?, ?)");
+		psInsertTweet = session.prepare("INSERT INTO tweet (text, created_at, user_name, topic) VALUES (?, ?, ?, ?)");
 		bsInsertTweet = new BoundStatement(psInsertTweet);
+		
+		psInsertSentiment = session.prepare("insert into sentiment(created_at, like, angry, hilarious, sad, neutral, topic) values (?, ?, ?, ?, ?, ?, ?)");
+		bsInsertSentiment = new BoundStatement(psInsertSentiment);
 	}
 	
 	public void insertHashtag(String hashtag, Integer freq){
 		
-		session.execute(bsInsertHashtag.bind(hashtag, freq));
+		session.execute(bsInsertHashtag.bind(DateManager.getDate(), hashtag.split(";")[0], freq, hashtag.split(";")[1]));
 	}
 	
-public void insertTweet(String tweet_id, String text, String user_id, String created_at, String retweet, String location, String language, String topic){
+public void insertTweet(String text, String user_name, String created_at, String topic){
 		
-		session.execute(bsInsertTweet.bind(tweet_id, text, user_id, created_at, retweet, location, language, topic));
+	//	session.execute(bsInsertTweet.bind(tweet_id, text, user_id, created_at, language, topic));
+	//	session.execute(bsInsertTweet.bind(text, created_at, topic));
+	session.execute(bsInsertTweet.bind(text, user_name, created_at, topic));
+	
 	}
+
+public void insertSentiment(double like, double angry, double hilarious, double sad, int neutral, String topic) {
+	
+		session.execute(bsInsertSentiment.bind(DateManager.getDate(), like, angry, hilarious, sad, neutral, topic));
+	}
+
+
+
 
 }
