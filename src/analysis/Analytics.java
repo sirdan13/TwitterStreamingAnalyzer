@@ -408,23 +408,7 @@ private static void setAllDictionaries() {
 	};
 
 
-	
-	
-	
-
-	public static List<Tuple2<Integer, String>> countHashtag(List<Tweet> tlist) {
-		
-		JavaRDD<Tweet> pTweet = jsc.parallelize(tlist);
-		JavaRDD<List<String>> pHashtags = pTweet.map((x)->new ArrayList<String>(x.getHashtagsList()));
-		JavaPairRDD<String, Integer> htCount = pHashtags.flatMapToPair(htExtractor);
-		JavaPairRDD<String, Integer> htFreq = htCount.reduceByKey(sumFunc).filter(x->(x._2>1));
-		JavaPairRDD<Integer, String> htFreq2 = htFreq.mapToPair(x->x.swap()).sortByKey(false);
-		List<Tuple2<Integer, String>> output = htFreq2.take(10);
-		return output;
-	
-	}
-	
-public static JavaPairRDD<Integer, String> countHashtag(JavaRDD<String> words) {
+	public static JavaPairRDD<Integer, String> countHashtag(JavaRDD<String> words) {
 
 	JavaPairRDD<String, Integer> wordCount = words.mapToPair((x)->new Tuple2<String, Integer>(x, 1)).reduceByKey(sumFunc);
 	return  wordCount.mapToPair(x->x.swap()).sortByKey(false);
@@ -874,7 +858,7 @@ VoidFunction<JavaPairRDD<String, String>> saveTweetToDB = new VoidFunction<JavaP
 		t.foreach(x->{
 			String [] scomposto = x._2.split("£&€");
 			if(scomposto.length>0)
-				cm.insertTweet(scomposto[0], scomposto[1], scomposto[2], scomposto[3]);
+				cm.insertTweet(scomposto[0], scomposto[1], scomposto[2], scomposto[3], scomposto[4], scomposto[5]);
 		});
 		
 	}

@@ -33,20 +33,24 @@ import scala.Tuple2;
 
 
 public class TwitterProducer {
+	
 	public static long lastLimitation = System.currentTimeMillis();
-
+	
 	public static void main(String[] args) throws Exception {
+		
 		final LinkedBlockingQueue<Status> queue = new LinkedBlockingQueue<Status>(1000);
 
-		long tempoInizioRun = System.currentTimeMillis();
+		//Imposto la grafica (Look and Feel) secondo il tema di nome "Windows"
 		Graphics.setLF("Windows");
+		
+		//Recupero le credenziali di accesso a dev.twitter.com
 		String [] arguments  = Graphics.readTwitterAuth();
 
-		
+		//Inserisco in una variabile di configurazione le credenziali di autenticazione a dev.twitter.com
 		ConfigurationBuilder cb = new ConfigurationBuilder();
-		cb.setDebugEnabled(true).setOAuthConsumerKey(arguments[0]).setOAuthConsumerSecret(arguments[1])
-				.setOAuthAccessToken(arguments[2]).setOAuthAccessTokenSecret(arguments[3]);
+		cb.setDebugEnabled(true).setOAuthConsumerKey(arguments[0]).setOAuthConsumerSecret(arguments[1]).setOAuthAccessToken(arguments[2]).setOAuthAccessTokenSecret(arguments[3]);
 		
+		//Inizializzo un oggetto TwitterStream a partire dalle credenziali appena fornite
 		TwitterStream twitterStream = new TwitterStreamFactory(cb.build()).getInstance();
 		StatusListener listener = new StatusListener() {
 		
@@ -69,7 +73,6 @@ public class TwitterProducer {
 					TwitterProducer.lastLimitation=System.currentTimeMillis();
 				}
 					
-				
 			}
 
 			@Override
@@ -119,150 +122,72 @@ public class TwitterProducer {
 		
 		props.put("metadata.broker.list", "localhost:2181");
 		props.put("bootstrap.servers", "localhost:9092");
+		
 		props.put("acks", "all");
 		props.put("retries", 0);
 		props.put("batch.size", 16384);
 		props.put("linger.ms", 20);
 		props.put("buffer.memory", 33554432);
-
-	
 		props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 		props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 		
 
 		Producer<String, String> producer = new KafkaProducer<String, String>(props);
-		int i = 0;
-		int j = 0;
-		int k = 0;
-
-		Analytics.init();
-		 
-		List<Tweet> tlist = new ArrayList<Tweet>();
-		long timeX = System.currentTimeMillis();
-		boolean stampato = false;
-		double vecchioRitmo = 0.0;
-		double maxRitmo = 0.0;
-		double minRitmo = 100000.0;
+		
+		int i = 0, j = 0, k = 0;
 		int nTweets = 0;
-		int maxTweets = 0;
-		int minTweets = 100000;
-		int previousNTweets = 0;
-		 while (true) {
-			Status ret = queue.poll();
-			if (ret == null) {
+		
+		Analytics.init();
+		
+		long lastUpdate = System.currentTimeMillis();
+		
+		while (true) {
+			Status status = queue.poll();
+			if (status == null) {
+				//Se lo status appena ricevuto è nullo, stoppiamo il processo per 0.1 secondi in attesa di dati non nulli
 				Thread.sleep(100);
-				// i++;
+	
 			} else {
+				//Questo oggetto di classe Tweet mi è necessario per poter processare il suo testo e ripulirlo da tutto ciò che non ci interessa
 				Tweet t;
-				if(!ret.isRetweet()){
-					t = new Tweet (ret.getId(), ret.getText(), ret.getCreatedAt(), ret.isRetweet(), ret.getHashtagEntities(), ret.getUser());
-				}
-				else{
-					t = new Tweet (ret.getId(), ret.getText(), ret.getCreatedAt(), ret.isRetweet(), ret.getRetweetedStatus().getText(), ret.getHashtagEntities(), ret.getUser());
-				}
+				
+				if(!status.isRetweet())
+					t = new Tweet(status.getText(), status.isRetweet());
+				else
+					t = new Tweet(status.getRetweetedStatus().getText(), status.isRetweet());
 
-				String regex = "£&€";
+				String separatore = "£&€";
 				String tweetRecord;
-				/*
-				 * Compongo la stringa contenente le info dettagliate sul tweet
-				 */
-				if(ret.isRetweet())
-					tweetRecord = ret.getRetweetedStatus().getText()+regex+DateManager.getDate()+regex+ret.getUser().getScreenName()+regex+topic;
+
+				//Compongo la stringa contenente le info dettagliate sul tweet, distinguendo i tweet dai retweet
+				if(status.isRetweet())
+					tweetRecord = status.getRetweetedStatus().getText()+separatore+DateManager.getDate()+separatore+status.getUser().getScreenName()+separatore+topic+separatore+status.getRetweetedStatus().getFavoriteCount()+separatore+status.getRetweetedStatus().getRetweetCount();
 				
 				else
-					tweetRecord = ret.getText()+regex+DateManager.getDate()+regex+ret.getUser().getScreenName()+regex+topic;
+					tweetRecord = status.getText()+separatore+DateManager.getDate()+separatore+status.getUser().getScreenName()+separatore+topic+separatore+status.getFavoriteCount()+separatore+status.getRetweetCount();
 				
 				//Invia i dati al topic "tweet"
 				producer.send(new ProducerRecord<String, String>("tweet", Integer.toString(j), tweetRecord));
-				/*
-				//Invia i dati al topic "original-text"
-				producer.send(new ProducerRecord<String, String>("original-text", Integer.toString(j), t.getText()));*/
 				//Invia i dati al topic "processed-text" (necessario per le analisi dei termini più citati)
 				producer.send(new ProducerRecord<String, String>("top-words", Integer.toString(j), t.getProcessedText()+";"+topic));
 				//Invia i dati al topic "hashtags"
-				for(HashtagEntity ht : ret.getHashtagEntities())
+				for(HashtagEntity ht : status.getHashtagEntities())
 					producer.send(new ProducerRecord<String, String>("hashtags", Integer.toString(i++), ht.getText().toLowerCase()+";"+topic));
 				//Invia i dati al topic "mentions"
-				if(ret.getUserMentionEntities().length>0)
-					for(UserMentionEntity ue : ret.getUserMentionEntities())
+				if(status.getUserMentionEntities().length>0)
+					for(UserMentionEntity ue : status.getUserMentionEntities())
 						producer.send(new ProducerRecord<String, String>("mentions", Integer.toString(k++), ue.getScreenName()+";"+topic));
-				producer.send(new ProducerRecord<String, String>("sentiment", ret.getLang(), t.getProcessedText()+";"+topic));
-				producer.send(new ProducerRecord<String, String> ("users", Integer.toString(1), "@"+ret.getUser().getScreenName()+";"+ret.getUser().getName()+";"+ret.getUser().getDescription()+";"+ret.getUser().getBiggerProfileImageURL()));
-				tlist.add(t);
-				System.out.println(ret.getUser().getDescription());
+				producer.send(new ProducerRecord<String, String>("sentiment", status.getLang(), t.getProcessedText()+";"+topic));
+				
+				if(System.currentTimeMillis()-lastUpdate>=10000){
+					System.out.println("Tweet ricevuti: "+nTweets);
+					lastUpdate = System.currentTimeMillis();
+				}
+					
 				nTweets++;
 				j++;
 			}
 			
-			
-		 long timeY = System.currentTimeMillis();
-		 long updateTime = 20000;
-//		 int nTweetsPeriodo = tlist.size()-nTweets;
-		 int currentNTweets = nTweets-previousNTweets;
-		 if(timeY-timeX>=updateTime && currentNTweets>10){
-			 System.out.println("******************");
-			 System.out.println("STATISTICS");
-			 System.out.println("******************");
-			 System.out.println();
-			 List<Tuple2<Integer, String>> htFrequencies = Analytics.countHashtag(tlist);
-			 System.out.println("Tweet ricevuti dall'inizio: "+nTweets);
-			 System.out.println("Tweet ricevuti in questo periodo: "+(currentNTweets));
-			 if((currentNTweets)>maxTweets){
-				 maxTweets = (currentNTweets);
-				 System.out.println("Nuovo record di tweet ricevuti in un solo periodo");
-			 }
-			 else
-				 System.out.println("Record attuale di tweet ricevuti in un solo periodo: "+maxTweets);
-			 if((currentNTweets)<minTweets){
-				 minTweets=(currentNTweets);
-				 System.out.println("Nuovo record negativo di tweet ricevuti in un solo periodo");
-			 }
-			 else
-				 System.out.println("Record negativo attuale di tweet ricevuti in un solo periodo: "+minTweets);
-			 double ritmo = (double) (currentNTweets)/((updateTime)/1000.0);
-			 ritmo = round(ritmo, 2);
-			 System.out.println("Ritmo di acquisizione: "+ritmo+" T/s");
-			 if(vecchioRitmo>ritmo)
-				 System.out.println("Differenza dal periodo precedente: -"+(round((vecchioRitmo-ritmo), 2)+" T/s"));
-			 if(ritmo>vecchioRitmo)
-				 System.out.println("Differenza dal periodo precedente: +"+(round((ritmo-vecchioRitmo), 2)+" T/s"));
-			 vecchioRitmo = ritmo;
-			 if(ritmo>maxRitmo){
-				 System.out.println("Nuovo record di Tweet al secondo: "+ritmo+" T/s");
-				 maxRitmo=ritmo;
-			 }
-			 else
-				 System.out.println("Massimo numero di Tweet al secondo registrato finora: "+maxRitmo+" T/s");
-			 
-			 if(ritmo<minRitmo){
-				 System.out.println("Record negativo per il numero di Tweet al secondo: "+ritmo+" T/s");
-				 minRitmo=ritmo;
-			 }
-			 else
-				 System.out.println("Minor numero di Tweet al secondo registrato finora: "+minRitmo+" T/s");
-			 System.out.println();
-			 System.out.println("******************");
-			 System.out.println("HASHTAGS");
-			 System.out.println("******************");
-			 System.out.println();
-			 for(Tuple2<Integer, String> ht : htFrequencies)
-				 System.out.println("L'hashtag #"+ht._2+" e' stato citato\t"+ht._1+" volte.");
-			 timeX=System.currentTimeMillis();
-			 stampato=false;
-		//	 nTweets = tlist.size();
-		//	 tweetPeriodo = nTweets;
-			 previousNTweets = nTweets;
-		 }
-		 
-	
-		 if((timeX+updateTime-timeY)/1000==updateTime/2/1000 && !stampato) {
-			 System.out.println(); 
-		//	 System.out.println("Aggiornamento tra: "+(timeX+updateTime-timeY)/1000+" secondi");
-			 System.out.println("Tempo trascorso dall'inizio: "+(System.currentTimeMillis()-tempoInizioRun)/1000/60+" minuti");
-			 System.out.println(); 
-			 stampato=true;
-		 }
-
 	}
 
 }
@@ -348,15 +273,6 @@ public class TwitterProducer {
 		}
 		sc.close();
 		return output;
-	}
-	
-	public static double round(double value, int places) {
-	    if (places < 0) throw new IllegalArgumentException();
-
-	    long factor = (long) Math.pow(10, places);
-	    value = value * factor;
-	    long tmp = Math.round(value);
-	    return (double) tmp / factor;
 	}
 	
 

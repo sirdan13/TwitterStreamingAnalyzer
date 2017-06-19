@@ -15,49 +15,18 @@ public class Tweet implements Serializable {
 	
 	private static final long serialVersionUID = 1L;
 	
-	private long tweet_id;
 	private String text;
-	private Date created_at;
-	private boolean isRetweet;
-	//Se un tweet è retweet, allora salveremo anche il testo del tweet originario
-	private String originalTweetText;
-	private HashtagEntity [] hashtags;
-	private List<String> hashtagsList;
-	private User user;
-	
 	private String processedText;
+	private boolean isRetweet;
 	
+	
+
 	public Tweet(){
 		
 	}
 	
-	public Tweet(long tweet_id, String text, Date created_at, boolean retweet, HashtagEntity[] hashtags, User user) {
-		super();
-		this.tweet_id = tweet_id;
-		this.text = text;
-		this.created_at = created_at;
-		this.isRetweet = retweet;
-		this.hashtags = hashtags;
-		this.user = user;
-		hashtagsList = new ArrayList<String>();
-		for(HashtagEntity h : hashtags)
-			hashtagsList.add(h.getText().toLowerCase());
-		processText();
-	}
-	
-	
-	public Tweet(long tweet_id, String text, Date created_at, boolean retweet, String originalTweetText, HashtagEntity[] hashtags, User user) {
-		super();
-		this.tweet_id = tweet_id;
-		this.text = text;
-		this.created_at = created_at;
-		this.isRetweet = retweet;
-		this.originalTweetText=originalTweetText;
-		this.hashtags = hashtags;
-		this.user = user;
-		hashtagsList = new ArrayList<String>();
-		for(HashtagEntity h : hashtags)
-			hashtagsList.add(h.getText().toLowerCase());
+	public Tweet(String originalText,boolean isRetweet){
+		this.text = originalText;
 		processText();
 	}
 	
@@ -107,16 +76,14 @@ public class Tweet implements Serializable {
 		            .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
 		}
 	
+	public String getProcessedText() {
+		return processedText;
+	}
+
+	public void setProcessedText(String processedText) {
+		this.processedText = processedText;
+	}
 	
-
-	public long getTweet_id() {
-		return tweet_id;
-	}
-
-	public void setTweet_id(long tweet_id) {
-		this.tweet_id = tweet_id;
-	}
-
 	public String getText() {
 		return text;
 	}
@@ -125,61 +92,13 @@ public class Tweet implements Serializable {
 		this.text = text;
 	}
 
-	public Date getCreated_at() {
-		return created_at;
-	}
-
-	public void setCreated_at(Date created_at) {
-		this.created_at = created_at;
-	}
-
 	public boolean isRetweet() {
 		return isRetweet;
 	}
 
-	public void setRetweet(boolean retweet) {
-		this.isRetweet = retweet;
+	public void setRetweet(boolean isRetweet) {
+		this.isRetweet = isRetweet;
 	}
 
-	public HashtagEntity[] getHashtags() {
-		return hashtags;
-	}
-
-	public void setHashtags(HashtagEntity[] hashtags) {
-		this.hashtags = hashtags;
-	}
-
-	public List<String> getHashtagsList() {
-		return hashtagsList;
-	}
-
-	public void setHashtagsList(List<String> hashtagsList) {
-		this.hashtagsList = hashtagsList;
-	}
-
-	public User getUser() {
-		return user;
-	}
-
-	public void setUser(User user) {
-		this.user = user;
-	}
-	
-	public String getProcessedText() {
-		return processedText;
-	}
-
-	public void setProcessedText(String processedText) {
-		this.processedText = processedText;
-	}
-
-	public String getOriginalTweetText() {
-		return originalTweetText;
-	}
-
-	public void setOriginalTweetText(String originalTweetText) {
-		this.originalTweetText = originalTweetText;
-	}
-
-	
+		
 }

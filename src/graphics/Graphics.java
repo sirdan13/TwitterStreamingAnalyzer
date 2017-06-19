@@ -13,6 +13,7 @@ import java.util.List;
 import javax.imageio.ImageIO;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -188,6 +189,35 @@ public class Graphics {
 		panel.setBackground(new ColorUIResource(214,227,249));
 		JOptionPane.showMessageDialog(null, panel, "Twitter", 0, icon);
         
+	}
+	
+	public static void mainMenu() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException{
+		JPanel panel = new JPanel(null);
+		JButton button1 = new JButton();
+		button1.setText("Conteggio Tweet"); button1.setSize(300, 80); button1.setLocation(100, 200); button1.setFont(new Font("Verdana", Font.ITALIC, 20));
+		JButton button2 = new JButton();
+		button2.setText("Top #Hashtag"); button2.setSize(300, 80); button2.setLocation(100, 350); button2.setFont(new Font("Verdana", Font.ITALIC, 20));
+		panel.add(button2); panel.add(button1);
+		
+		
+		Graphics.setLF("Windows");
+		UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
+		UIManager.put("Panel.background",new ColorUIResource(214,227,249));
+		Dimension size = UIManager.getDimension("OptionPane.minimumSize");
+		size.width = 1000;
+		size.height= 700;
+		UIManager.put("OptionPane.minimumSize", size);
+		panel.setForeground(new ColorUIResource(214,227,249));
+		panel.setBackground(new ColorUIResource(214,227,249));
+		
+		
+		
+		JOptionPane.showMessageDialog(null, panel, "Twitter", 0, icon);
+		
+		
+		
+		
+		
 	}
 
 }

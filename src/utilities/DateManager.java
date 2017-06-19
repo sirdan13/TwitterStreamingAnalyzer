@@ -18,10 +18,11 @@ public class DateManager {
 		return dateFormat.format(date);
 		
 	}
-	/*
+	
 	public static void main(String [] args) throws ClassNotFoundException, InstantiationException, IllegalAccessException, TwitterException, IOException, UnsupportedLookAndFeelException{
-		Graphics.mostMentionedUser("morrisonravel");
+	//	Graphics.mostMentionedUser("robi_fall");
+		Graphics.mainMenu();
 	}
-	*/
+	
 
 }
