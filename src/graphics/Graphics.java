@@ -2,6 +2,8 @@ package graphics;
 
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -14,6 +16,7 @@ import javax.imageio.ImageIO;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -34,6 +37,7 @@ import twitter4j.conf.ConfigurationBuilder;
 public class Graphics {
 	
 	static Icon icon =  new ImageIcon("config/icon.png");
+	static String analisi = "";
 	
 	public Graphics(String fileIcon){
 		Graphics.icon = new ImageIcon(fileIcon);
@@ -47,12 +51,7 @@ public class Graphics {
 		   JLabel label = new JLabel();
 		   label.setText("Inserire i parametri: ");
 		   label.setFont(new Font("Calibri", Font.BOLD, 20));
-		   Object[] message = {
-				label,
-		       "Keywords:", key,
-		       "Languages:", lang,
-		       "Topic:", topic
-		   };
+		   Object[] message = {label, "Keywords:", key, "Languages:", lang, "Topic:", topic};
 		   Dimension size = UIManager.getDimension("OptionPane.minimumSize");
 		   size.width = 450;
 		   size.height= 300;
@@ -196,8 +195,33 @@ public class Graphics {
 		JButton button1 = new JButton();
 		button1.setText("Conteggio Tweet"); button1.setSize(300, 80); button1.setLocation(100, 200); button1.setFont(new Font("Verdana", Font.ITALIC, 20));
 		JButton button2 = new JButton();
-		button2.setText("Top #Hashtag"); button2.setSize(300, 80); button2.setLocation(100, 350); button2.setFont(new Font("Verdana", Font.ITALIC, 20));
-		panel.add(button2); panel.add(button1);
+		button2.setText("Top #Hashtags"); button2.setSize(300, 80); button2.setLocation(100, 300); button2.setFont(new Font("Verdana", Font.ITALIC, 20));
+		JButton button3 = new JButton();
+		button3.setText("Top Words"); button3.setSize(300, 80); button3.setLocation(450, 200); button3.setFont(new Font("Verdana", Font.ITALIC, 20));
+		JButton button4 = new JButton();
+		button4.setText("Top Utenti"); button4.setSize(300, 80); button4.setLocation(450, 300); button4.setFont(new Font("Verdana", Font.ITALIC, 20));
+		JButton button5 = new JButton();
+		button5.setText("Sentiment analysis"); button5.setSize(300, 80); button5.setLocation(100, 400); button5.setFont(new Font("Verdana", Font.ITALIC, 20));
+		JButton button6 = new JButton();
+		button6.setText("Tweet più popolari"); button6.setSize(300, 80); button6.setLocation(450, 400); button6.setFont(new Font("Verdana", Font.ITALIC, 20));
+		JLabel titolo = new JLabel();
+		titolo.setText("Scegliere un'analisi:"); titolo.setSize(650, 80); titolo.setLocation(250, 70); titolo.setFont(new Font("Verdana", Font.BOLD, 30));
+		
+		ActionListener listener = new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JButton source = (JButton) e.getSource();
+               	analisi = source.getText();
+            }
+        };
+        
+        button1.addActionListener(listener);
+        button2.addActionListener(listener);
+        button3.addActionListener(listener);
+        button4.addActionListener(listener);
+        button5.addActionListener(listener);
+        button6.addActionListener(listener);
+		panel.add(button2); panel.add(button1); panel.add(button3); panel.add(button4); panel.add(button5); panel.add(button6); panel.add(titolo);
 		
 		
 		Graphics.setLF("Windows");
@@ -210,14 +234,242 @@ public class Graphics {
 		panel.setForeground(new ColorUIResource(214,227,249));
 		panel.setBackground(new ColorUIResource(214,227,249));
 		
+		JOptionPane.showOptionDialog(null, panel, "Twitter", 2, 0, icon, null, null);
 		
+		if(analisi.equals(null))
+			System.exit(-1);
 		
-		JOptionPane.showMessageDialog(null, panel, "Twitter", 0, icon);
-		
+		if(analisi.equals("Conteggio Tweet")){
+			tweetCountAnalysis();
+		}
+		if(analisi.equals("Top #Hashtags")){
+			topHashtagsAnalysis();
+		}
+		if(analisi.equals("Top Words")){
+			topwordsAnalysis();
+		}
+		if(analisi.equals("Top Utenti")){
+			topUsersAnalysis();
+		}
+		if(analisi.equals("Sentiment analysis")){
+			sentimentAnalysis();
+		}
+		if(analisi.equals("Tweet più popolari")){
+			popularTweets();
+		}
 		
 		
 		
 		
 	}
+
+	private static void popularTweets() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException {
+		
+		JTextField topic = new JTextField();
+		JTextField oraInizio = new JTextField();
+		JTextField oraFine = new JTextField();
+		JLabel label = new JLabel();
+		label.setText("Inserire i parametri: ");
+		label.setFont(new Font("Calibri", Font.BOLD, 20));
+		Object[] message = {label, "Inserire l'argomento di interesse:", topic, "Inserire ora di inizio analisi (opzionale):", oraInizio, "Inserire ora di fine analisi (opzionale):", oraFine};
+		Dimension size = UIManager.getDimension("OptionPane.minimumSize");
+		size.width = 450;
+		size.height= 300;
+		UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
+		UIManager.put("Panel.background",new ColorUIResource(214,227,249));
+		String [] options = {"OK", "Indietro", "Esci"};
+		int option = JOptionPane.showOptionDialog(null, message, "Tweet popolari", 0, 0, icon, options, options[0]);
+		if(option==1)
+			mainMenu();
+		else
+			if(option==2)
+				System.exit(-1);
+		while(topic.getText().length()==0){
+			label.setText("Parametri errati. Riprovare: ");
+			option = JOptionPane.showOptionDialog(null, message, "Tweet popolari", 0, 0, icon, options, options[0]);
+			if(option==1){
+				mainMenu();
+				break;
+			}
+			else
+				if(option==2)
+					System.exit(-1);
+		}
+	}
+
+	private static void sentimentAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException {
+		JTextField topic = new JTextField();
+		JTextField oraInizio = new JTextField();
+		JTextField oraFine = new JTextField();
+		JLabel label = new JLabel();
+		label.setText("Inserire i parametri: ");
+		label.setFont(new Font("Calibri", Font.BOLD, 20));
+		Object[] message = {label, "Inserire l'argomento di interesse:", topic, "Inserire ora di inizio analisi (opzionale):", oraInizio, "Inserire ora di fine analisi (opzionale):", oraFine};
+		Dimension size = UIManager.getDimension("OptionPane.minimumSize");
+		size.width = 450;
+		size.height= 300;
+		UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
+		UIManager.put("Panel.background",new ColorUIResource(214,227,249));
+		String [] options = {"OK", "Indietro", "Esci"};
+		int option = JOptionPane.showOptionDialog(null, message, "Sentiment Analysis", 0, 0, icon, options, options[0]);
+		if(option==1)
+			mainMenu();
+		else
+			if(option==2)
+				System.exit(-1);
+		while(topic.getText().length()==0){
+			label.setText("Parametri errati. Riprovare: ");
+			option = JOptionPane.showOptionDialog(null, message, "Sentiment Analysis", 0, 0, icon, options, options[0]);
+			if(option==1){
+				mainMenu();
+				break;
+			}
+			else
+				if(option==2)
+					System.exit(-1);
+		}
+		
+	}
+
+	private static void topUsersAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException {
+		JTextField topic = new JTextField();
+		JTextField oraInizio = new JTextField();
+		JTextField oraFine = new JTextField();
+		JLabel label = new JLabel();
+		label.setText("Inserire i parametri: ");
+		label.setFont(new Font("Calibri", Font.BOLD, 20));
+		Object[] message = {label, "Inserire l'argomento di interesse:", topic, "Inserire ora di inizio analisi (opzionale):", oraInizio, "Inserire ora di fine analisi (opzionale):", oraFine};
+		Dimension size = UIManager.getDimension("OptionPane.minimumSize");
+		size.width = 450;
+		size.height= 300;
+		UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
+		UIManager.put("Panel.background",new ColorUIResource(214,227,249));
+		String [] options = {"OK", "Indietro", "Esci"};
+		int option = JOptionPane.showOptionDialog(null, message, "Top Users", 0, 0, icon, options, options[0]);
+		if(option==1)
+			mainMenu();
+		else
+			if(option==2)
+				System.exit(-1);
+		while(topic.getText().length()==0){
+			label.setText("Parametri errati. Riprovare: ");
+			option = JOptionPane.showOptionDialog(null, message, "Top Users", 0, 0, icon, options, options[0]);
+			if(option==1){
+				mainMenu();
+				break;
+			}
+			else
+				if(option==2)
+					System.exit(-1);
+		}
+		
+	}
+
+	private static void topwordsAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException {
+		JTextField topic = new JTextField();
+		JTextField oraInizio = new JTextField();
+		JTextField oraFine = new JTextField();
+		JLabel label = new JLabel();
+		label.setText("Inserire i parametri: ");
+		label.setFont(new Font("Calibri", Font.BOLD, 20));
+		Object[] message = {label, "Inserire l'argomento di interesse:", topic, "Inserire ora di inizio analisi (opzionale):", oraInizio, "Inserire ora di fine analisi (opzionale):", oraFine};
+		Dimension size = UIManager.getDimension("OptionPane.minimumSize");
+		size.width = 450;
+		size.height= 300;
+		UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
+		UIManager.put("Panel.background",new ColorUIResource(214,227,249));
+		String [] options = {"OK", "Indietro", "Esci"};
+		int option = JOptionPane.showOptionDialog(null, message, "Top words", 0, 0, icon, options, options[0]);
+		if(option==1)
+			mainMenu();
+		else
+			if(option==2)
+				System.exit(-1);
+		while(topic.getText().length()==0){
+			label.setText("Parametri errati. Riprovare: ");
+			option = JOptionPane.showOptionDialog(null, message, "Top words", 0, 0, icon, options, options[0]);
+			if(option==1){
+				mainMenu();
+				break;
+			}
+			else
+				if(option==2)
+					System.exit(-1);
+		}
+		
+	}
+
+	private static void topHashtagsAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException {
+		JTextField topic = new JTextField();
+		JTextField oraInizio = new JTextField();
+		JTextField oraFine = new JTextField();
+		JLabel label = new JLabel();
+		label.setText("Inserire i parametri: ");
+		label.setFont(new Font("Calibri", Font.BOLD, 20));
+		Object[] message = {label, "Inserire l'argomento di interesse:", topic, "Inserire ora di inizio analisi (opzionale):", oraInizio, "Inserire ora di fine analisi (opzionale):", oraFine};
+		Dimension size = UIManager.getDimension("OptionPane.minimumSize");
+		size.width = 450;
+		size.height= 300;
+		UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
+		UIManager.put("Panel.background",new ColorUIResource(214,227,249));
+		String [] options = {"OK", "Indietro", "Esci"};
+		int option = JOptionPane.showOptionDialog(null, message, "Top Hashtags", 0, 0, icon, options, options[0]);
+		if(option==1)
+			mainMenu();
+		else
+			if(option==2)
+				System.exit(-1);
+		while(topic.getText().length()==0){
+			label.setText("Parametri errati. Riprovare: ");
+			option = JOptionPane.showOptionDialog(null, message, "Top Hashtags", 0, 0, icon, options, options[0]);
+			if(option==1){
+				mainMenu();
+				break;
+			}
+			else
+				if(option==2)
+					System.exit(-1);
+		}
+		
+	}
+
+	private static void tweetCountAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException {
+
+		JTextField topic = new JTextField();
+		JTextField oraInizio = new JTextField();
+		JTextField oraFine = new JTextField();
+		JLabel label = new JLabel();
+		label.setText("Inserire i parametri: ");
+		label.setFont(new Font("Calibri", Font.BOLD, 20));
+		Object[] message = {label, "Inserire l'argomento di interesse:", topic, "Inserire ora di inizio analisi (opzionale):", oraInizio, "Inserire ora di fine analisi (opzionale):", oraFine};
+		Dimension size = UIManager.getDimension("OptionPane.minimumSize");
+		size.width = 450;
+		size.height= 300;
+		UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
+		UIManager.put("Panel.background",new ColorUIResource(214,227,249));
+		String [] options = {"OK", "Indietro", "Esci"};
+		int option = JOptionPane.showOptionDialog(null, message, "Tweet Count", 0, 0, icon, options, options[0]);
+		if(option==1)
+			mainMenu();
+		else
+			if(option==2)
+				System.exit(-1);
+		while(topic.getText().length()==0){
+			label.setText("Parametri errati. Riprovare: ");
+			option = JOptionPane.showOptionDialog(null, message, "Tweet Count", 0, 0, icon, options, options[0]);
+			if(option==1){
+				mainMenu();
+				break;
+			}
+			else
+				if(option==2)
+					System.exit(-1);
+		}
+		
+	}
+	
+	
+	
+	
 
 }
