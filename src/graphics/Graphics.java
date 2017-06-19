@@ -2,14 +2,20 @@ package graphics;
 
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.imageio.ImageIO;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
@@ -17,6 +23,12 @@ import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.plaf.ColorUIResource;
 
 import producer.TwitterProducer;
+import twitter4j.ResponseList;
+import twitter4j.Twitter;
+import twitter4j.TwitterException;
+import twitter4j.TwitterFactory;
+import twitter4j.User;
+import twitter4j.conf.ConfigurationBuilder;
 
 public class Graphics {
 	
@@ -141,6 +153,41 @@ public class Graphics {
 		 if(scelta==2)
 			 return TwitterProducer.readTwitterAuth("config/credenziali_twitter3.txt");
 		 return null;
+	}
+	
+	
+	public static void mostMentionedUser(String screen_name) throws TwitterException, IOException, ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException{
+		String [] auth = TwitterProducer.readTwitterAuth("config/credenziali_twitter3.txt");
+		ConfigurationBuilder cb = new ConfigurationBuilder();
+		cb.setDebugEnabled(true).setOAuthConsumerKey(auth[0]).setOAuthConsumerSecret(auth[1])
+				.setOAuthAccessToken(auth[2]).setOAuthAccessTokenSecret(auth[3]);
+        Twitter twitter = new TwitterFactory(cb.build()).getInstance();
+        ResponseList<User> users = twitter.lookupUsers(screen_name);
+        User user = users.get(0);
+        URL url = new URL(user.getBiggerProfileImageURL());
+        BufferedImage img = ImageIO.read(url);
+        ImageIcon userIcon = new ImageIcon(img);
+        JPanel panel = new JPanel(null);
+        JLabel titolo = new JLabel(), nome = new JLabel(), account = new JLabel(), immagine = new JLabel(userIcon), descrizione = new JLabel();
+        titolo.setSize(800, 80); titolo.setLocation(0, 0); titolo.setFont(new Font("Verdana", Font.PLAIN, 20));
+        nome.setSize(200, 28); nome.setLocation(100, 65); nome.setFont(new Font("Verdana", Font.BOLD, 20));
+        account.setSize(200, 15); account.setLocation(100, 95); account.setFont(new Font("Verdana", Font.ITALIC, 15));
+        descrizione.setSize(800, 200); descrizione.setLocation(0, 75); descrizione.setFont(new Font("Verdana", Font.ITALIC, 18));
+        immagine.setSize(80, 80); immagine.setLocation(0, 65);
+        nome.setText(user.getName()); account.setText("@"+user.getScreenName()); titolo.setText("L'utente più citato:"); descrizione.setText(user.getDescription());
+        panel.add(descrizione); panel.add(immagine); panel.add(account); panel.add(nome); panel.add(titolo);
+        
+        Graphics.setLF("Windows");
+		UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
+		UIManager.put("Panel.background",new ColorUIResource(214,227,249));
+		Dimension size = UIManager.getDimension("OptionPane.minimumSize");
+		size.width = 1000;
+		size.height= 300;
+		UIManager.put("OptionPane.minimumSize", size);
+		panel.setForeground(new ColorUIResource(214,227,249));
+		panel.setBackground(new ColorUIResource(214,227,249));
+		JOptionPane.showMessageDialog(null, panel, "Twitter", 0, icon);
+        
 	}
 
 }

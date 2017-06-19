@@ -1,8 +1,14 @@
 package utilities;
 
+import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+
+import javax.swing.UnsupportedLookAndFeelException;
+
+import graphics.Graphics;
+import twitter4j.TwitterException;
 
 public class DateManager {
 	
@@ -12,6 +18,10 @@ public class DateManager {
 		return dateFormat.format(date);
 		
 	}
-	
+	/*
+	public static void main(String [] args) throws ClassNotFoundException, InstantiationException, IllegalAccessException, TwitterException, IOException, UnsupportedLookAndFeelException{
+		Graphics.mostMentionedUser("morrisonravel");
+	}
+	*/
 
 }

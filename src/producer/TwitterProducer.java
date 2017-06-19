@@ -187,7 +187,9 @@ public class TwitterProducer {
 					for(UserMentionEntity ue : ret.getUserMentionEntities())
 						producer.send(new ProducerRecord<String, String>("mentions", Integer.toString(k++), ue.getScreenName()+";"+topic));
 				producer.send(new ProducerRecord<String, String>("sentiment", ret.getLang(), t.getProcessedText()+";"+topic));
+				producer.send(new ProducerRecord<String, String> ("users", Integer.toString(1), "@"+ret.getUser().getScreenName()+";"+ret.getUser().getName()+";"+ret.getUser().getDescription()+";"+ret.getUser().getBiggerProfileImageURL()));
 				tlist.add(t);
+				System.out.println(ret.getUser().getDescription());
 				nTweets++;
 				j++;
 			}
