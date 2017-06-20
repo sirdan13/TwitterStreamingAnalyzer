@@ -538,7 +538,13 @@ public class Graphics {
 		size.height= 500;
 		UIManager.put("OptionPane.minimumSize", size);
 		panel.setSize(700, 700);
-		JOptionPane.showMessageDialog(null, panel, "Tweet più popolare", 0, new ImageIcon("config/icon.png"));
+		JButton refresh = new JButton(); JButton mainMenu = new JButton();
+		refresh.setText("Ricarica"); refresh.setSize(165, 65); refresh.setLocation(850, 310); refresh.setFont(new Font("Verdana", Font.PLAIN, 15));
+		mainMenu.setText("Menù principale"); mainMenu.setSize(165, 65); mainMenu.setLocation(1020, 310); mainMenu.setFont(new Font("Verdana", Font.PLAIN, 15));
+		panel.add(refresh); panel.add(mainMenu);
+		int result = JOptionPane.showOptionDialog(null, panel, "Tweet più popolare", 2, 0, icon, null, null);
+		System.out.println(result);
+	//	JOptionPane.showMessageDialog(null, panel, "Tweet più popolare", 0, new ImageIcon("config/icon.png"));
 		
 	}
 }
