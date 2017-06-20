@@ -161,7 +161,7 @@ public class TwitterProducer {
 
 				//Compongo la stringa contenente le info dettagliate sul tweet, distinguendo i tweet dai retweet
 				if(status.isRetweet())
-					tweetRecord = status.getRetweetedStatus().getText()+separatore+DateManager.getDate()+separatore+status.getUser().getScreenName()+separatore+topic+separatore+status.getRetweetedStatus().getFavoriteCount()+separatore+status.getRetweetedStatus().getRetweetCount();
+					tweetRecord = status.getRetweetedStatus().getText()+separatore+DateManager.getDate()+separatore+status.getRetweetedStatus().getUser().getScreenName()+separatore+topic+separatore+status.getRetweetedStatus().getFavoriteCount()+separatore+status.getRetweetedStatus().getRetweetCount();
 				
 				else
 					tweetRecord = status.getText()+separatore+DateManager.getDate()+separatore+status.getUser().getScreenName()+separatore+topic+separatore+status.getFavoriteCount()+separatore+status.getRetweetCount();

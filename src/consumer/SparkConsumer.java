@@ -71,17 +71,34 @@ public class SparkConsumer {
 		
 		/*
 		 * Creo un oggetto di classe Analytics, passandogli i parametri di Spark
-		 * e chiamo il suo metodo analyzeTopic, per analizzare il topic desiderato
+		 * e chiamo il suo metodo analyzeTopic, per inviare al db i dati del topic desiderato
 		 */
-		List<String> hosts = new ArrayList<String>();
-		hosts.add("marvel.sta.uniroma1.it");
-		hosts.add("gpu.sta.uniroma1.it");
-		CassandraManager cm = new CassandraManager(hosts, "gbd2017_lombardi", "scienzestatisiche");
+		List<String> hosts = readCassandraHosts("config/cassandra_hosts.txt");
+		List<String> credenzialiCassandra = readCassandraCredentials("config/credenziali_cassandra.txt");
+		CassandraManager cm = new CassandraManager(hosts, credenzialiCassandra.get(0), credenzialiCassandra.get(1));
 		Analytics analytics = new Analytics(jssc, zookeeper_server, kafka_consumer_group, topics, cm);
 		analytics.analyzeTopic(topic);
 
 	}
 	
+	public static List<String> readCassandraCredentials(String file) throws FileNotFoundException {
+		Scanner sc = new Scanner(new File(file));
+		List<String> credenziali = new ArrayList<String>();  
+		while(sc.hasNextLine())
+			credenziali.add(sc.nextLine().split("=")[1]);
+		sc.close();
+		return credenziali;
+	}
+
+	public static List<String> readCassandraHosts(String file) throws FileNotFoundException {
+		Scanner sc = new Scanner(new File(file));
+		List<String> hosts = new ArrayList<String>();  
+		while(sc.hasNextLine())
+			hosts.add(sc.nextLine());
+		sc.close();
+		return hosts;
+	}
+
 	private static void init() {
 		conf = new SparkConf().setAppName(appName).setMaster(master);
 		jssc = new JavaStreamingContext(conf, new Duration(duration));

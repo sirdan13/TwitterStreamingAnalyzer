@@ -1,22 +1,23 @@
 package graphics;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 import javax.imageio.ImageIO;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -26,6 +27,15 @@ import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.plaf.ColorUIResource;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaSparkContext;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
+
+import analysis.CassandraManager;
+import consumer.SparkConsumer;
 import producer.TwitterProducer;
 import twitter4j.ResponseList;
 import twitter4j.Twitter;
@@ -38,6 +48,11 @@ public class Graphics {
 	
 	static Icon icon =  new ImageIcon("config/icon.png");
 	static String analisi = "";
+	
+	static SparkConf conf;
+	static String appName;
+	static String master;
+	static JavaSparkContext jsc;
 	
 	public Graphics(String fileIcon){
 		Graphics.icon = new ImageIcon(fileIcon);
@@ -190,7 +205,7 @@ public class Graphics {
         
 	}
 	
-	public static void mainMenu() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException{
+	public static void mainMenu() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, FileNotFoundException{
 		JPanel panel = new JPanel(null);
 		JButton button1 = new JButton();
 		button1.setText("Conteggio Tweet"); button1.setSize(300, 80); button1.setLocation(100, 200); button1.setFont(new Font("Verdana", Font.ITALIC, 20));
@@ -235,7 +250,6 @@ public class Graphics {
 		panel.setBackground(new ColorUIResource(214,227,249));
 		
 		JOptionPane.showOptionDialog(null, panel, "Twitter", 2, 0, icon, null, null);
-		
 		if(analisi.equals(null))
 			System.exit(-1);
 		
@@ -259,11 +273,9 @@ public class Graphics {
 		}
 		
 		
-		
-		
 	}
 
-	private static void popularTweets() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException {
+	private static void popularTweets() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, FileNotFoundException {
 		
 		JTextField topic = new JTextField();
 		JTextField oraInizio = new JTextField();
@@ -279,7 +291,7 @@ public class Graphics {
 		UIManager.put("Panel.background",new ColorUIResource(214,227,249));
 		String [] options = {"OK", "Indietro", "Esci"};
 		int option = JOptionPane.showOptionDialog(null, message, "Tweet popolari", 0, 0, icon, options, options[0]);
-		if(option==1)
+	/*	if(option==1)
 			mainMenu();
 		else
 			if(option==2)
@@ -295,9 +307,25 @@ public class Graphics {
 				if(option==2)
 					System.exit(-1);
 		}
+*/
+		oraInizio.setText("2017-06-19 16:20:00.000");
+		oraFine.setText("2017-06-19 20:20:00.000");
+		if(oraInizio.getText().length()>0){
+			if(oraFine.getText().length()>0){
+
+				CassandraManager.getTweetsWithTimeManager(topic.getText(), oraInizio.getText(), oraFine.getText());
+			
+			}
+		}
+		else{
+			List<String> hosts = SparkConsumer.readCassandraHosts("config/cassandra_hosts.txt");
+			List<String> credenzialiCassandra = SparkConsumer.readCassandraCredentials("config/cassandra_credentials.txt");
+			CassandraManager cm = new CassandraManager(hosts, credenzialiCassandra.get(0), credenzialiCassandra.get(1));
+			ResultSet rs = cm.getTweets(topic.getText());
+		}
 	}
 
-	private static void sentimentAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException {
+	private static void sentimentAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, FileNotFoundException {
 		JTextField topic = new JTextField();
 		JTextField oraInizio = new JTextField();
 		JTextField oraFine = new JTextField();
@@ -331,7 +359,7 @@ public class Graphics {
 		
 	}
 
-	private static void topUsersAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException {
+	private static void topUsersAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, FileNotFoundException {
 		JTextField topic = new JTextField();
 		JTextField oraInizio = new JTextField();
 		JTextField oraFine = new JTextField();
@@ -365,7 +393,7 @@ public class Graphics {
 		
 	}
 
-	private static void topwordsAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException {
+	private static void topwordsAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, FileNotFoundException {
 		JTextField topic = new JTextField();
 		JTextField oraInizio = new JTextField();
 		JTextField oraFine = new JTextField();
@@ -399,7 +427,7 @@ public class Graphics {
 		
 	}
 
-	private static void topHashtagsAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException {
+	private static void topHashtagsAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, FileNotFoundException {
 		JTextField topic = new JTextField();
 		JTextField oraInizio = new JTextField();
 		JTextField oraFine = new JTextField();
@@ -433,7 +461,7 @@ public class Graphics {
 		
 	}
 
-	private static void tweetCountAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException {
+	private static void tweetCountAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, FileNotFoundException {
 
 		JTextField topic = new JTextField();
 		JTextField oraInizio = new JTextField();
@@ -470,6 +498,47 @@ public class Graphics {
 	
 	
 	
+	private static void initSpark() {
+		conf = new SparkConf().setAppName(appName).setMaster(master);
+		jsc = new JavaSparkContext(conf);
+		Logger.getLogger("org").setLevel(Level.ERROR);
+		Logger.getLogger("akka").setLevel(Level.ERROR);
+	}
 	
+	private static void loadProperties() throws FileNotFoundException{
+		Scanner sc = new Scanner(new File("config/spark_conf.txt"));
+		while(sc.hasNextLine()){
+			String line = sc.nextLine();
+			if(line.startsWith("appName"))
+				appName = line.split("=")[1];
+			if(line.startsWith("setMaster"))
+				master = line.split("=")[1];
+			}
+		sc.close();
 
+	}
+	
+	public static void topTweetWindow(String text, String user, Integer likeAndRetweet) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException{
+		JPanel panel = new JPanel(null);
+		JLabel titolo = new JLabel("Il tweet più popolare:"); JLabel testo = new JLabel(text); JLabel username = new JLabel("by @"+user); JLabel label_num_likes = new JLabel("Like + Retweet ricevuti:"); JLabel logoRetweet = new JLabel(new ImageIcon("config/retweet.png")); JLabel logoLike = new JLabel(new ImageIcon("config/heart.png")); JLabel num_likes = new JLabel(likeAndRetweet.toString());
+		titolo.setFont(new Font("Verdana", Font.BOLD, 35)); titolo.setSize(500, 100); titolo.setLocation(450, 0); titolo.setForeground(Color.RED);
+		testo.setFont(new Font("Verdana", Font.PLAIN, 20)); testo.setSize(1300, 80); testo.setLocation(0, 180);
+		username.setFont(new Font("Verdana", Font.ITALIC, 20)); username.setSize(150, 100); username.setLocation(0, 220);
+		label_num_likes.setFont(new Font("Verdana", Font.BOLD, 20)); label_num_likes.setSize(300, 100); label_num_likes.setLocation(160, 165);
+		num_likes.setFont(new Font("Verdana", Font.ITALIC, 20)); num_likes.setSize(130, 100); num_likes.setLocation(85, 118);
+		logoLike.setLocation(0, 150); logoRetweet.setLocation(40, 150); logoRetweet.setVisible(true); logoLike.setVisible(true);
+		logoLike.setSize(35, 35); logoRetweet.setSize(35, 35);
+		panel.add(num_likes); panel.add(username); panel.add(testo); panel.add(titolo); //panel.add(label_num_likes);
+		panel.add(logoLike); panel.add(logoRetweet);
+		Graphics.setLF("Windows");
+		UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
+		UIManager.put("Panel.background",new ColorUIResource(214,227,249));
+		Dimension size = UIManager.getDimension("OptionPane.minimumSize");
+		size.width = 1400;
+		size.height= 500;
+		UIManager.put("OptionPane.minimumSize", size);
+		panel.setSize(700, 700);
+		JOptionPane.showMessageDialog(null, panel, "Tweet più popolare", 0, new ImageIcon("config/icon.png"));
+		
+	}
 }

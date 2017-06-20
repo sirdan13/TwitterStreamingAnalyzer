@@ -271,7 +271,6 @@
 	</classpathentry>
 	<classpathentry kind="lib" path="C:/Users/daniele/workspace/Libs/Driver progetto/altro/non usare/kafka/kafka-streams-0.10.2.1.jar"/>
 	<classpathentry kind="lib" path="C:/Users/daniele/workspace/GBD/driver/neo4j-jdbc-2.1.4-jar-with-dependencies.jar"/>
-	<classpathentry kind="lib" path="C:/Users/daniele/workspace/Libs/Driver progetto/Cassandra jars/cassandra-driver-core-3.0.0.jar"/>
 	<classpathentry kind="lib" path="C:/Users/daniele/workspace/Libs/Driver progetto/Cassandra jars/guava-18.0.jar"/>
 	<classpathentry kind="lib" path="C:/Users/daniele/workspace/Libs/Driver progetto/Cassandra jars/metrics-core-3.0.2.jar"/>
 	<classpathentry kind="lib" path="C:/Users/daniele/workspace/Libs/Driver progetto/Cassandra jars/netty-all-4.0.23.Final.jar"/>
@@ -343,5 +342,6 @@
 	<classpathentry kind="lib" path="C:/Users/daniele/Desktop/Progetto/kafka_2.10-0.10.2.1/libs/validation-api-1.1.0.Final.jar"/>
 	<classpathentry kind="lib" path="C:/Users/daniele/Desktop/Progetto/kafka_2.10-0.10.2.1/libs/zkclient-0.10.jar"/>
 	<classpathentry kind="lib" path="C:/Users/daniele/Desktop/Progetto/kafka_2.10-0.10.2.1/libs/zookeeper-3.4.9.jar"/>
+	<classpathentry kind="lib" path="C:/Users/daniele/workspace/Libs/Driver progetto/Cassandra jars/cassandra-driver-core-3.2.0.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
