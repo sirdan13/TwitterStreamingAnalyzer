@@ -350,6 +350,16 @@ public class Graphics {
 					System.exit(-1);
 		}
 		
+		if(oraInizio.getText().length()>0){
+			if(oraFine.getText().length()>0)
+				CassandraManager.getSentimentWithTimeManager(topic.getText(), oraInizio.getText(), oraFine.getText());
+		}
+			
+		
+		else
+			CassandraManager.getSentimentManager(topic.getText());
+		
+		
 	}
 
 	private static void topUsersAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException {
@@ -516,6 +526,16 @@ public class Graphics {
 					System.exit(-1);
 		}
 		
+		if(oraInizio.getText().length()>0){
+			if(oraFine.getText().length()>0)
+				CassandraManager.getTweetCountManagerWithTime(topic.getText(), oraInizio.getText(), oraFine.getText());
+		}
+			
+		
+		else
+			CassandraManager.getTweetCountManager(topic.getText());
+		
+		
 	}
 	
 	
@@ -551,6 +571,11 @@ public class Graphics {
 
 	public static void topwordsWindow(List<Tuple2<Integer, String>> top10Words) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException {
 
+		if(top10Words.size()==0){
+			JOptionPane.showMessageDialog(null, "Nessun risultato per la query desiderata", "Errore", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
+			System.exit(-1);
+		}
+		
 		//Creo il pannello che ospiterà le componenti grafiche (null ci permette di impostare la grafica di default, che modificheremo in seguito)
 		JPanel panel = new JPanel(null);
 		/*
@@ -729,6 +754,30 @@ public class Graphics {
 				
 				
 			}
+
+	public static void tweetCount(String count) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException {
+		JPanel panel = new JPanel(null);
+		JLabel resultLabel = new JLabel(count);
+		resultLabel.setFont(new Font("Verdana", Font.BOLD, 17)); resultLabel.setSize(100, 100); resultLabel.setLocation(80, 65); resultLabel.setForeground(Color.RED);
+		JLabel label = new JLabel();
+		label.setFont(new Font("Verdana", Font.BOLD, 17)); label.setSize(300, 100); label.setLocation(40, 0); label.setText("Numero di tweet ricevuti:");
+		panel.add(label); panel.add(resultLabel);
+		
+		Graphics.setLF("Windows");
+		UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
+		UIManager.put("Panel.background",new ColorUIResource(214,227,249));
+		Dimension size = UIManager.getDimension("OptionPane.minimumSize");
+		size.width = 420;
+		size.height= 300;
+		UIManager.put("OptionPane.minimumSize", size);
+		String [] options = {"Menù principale", "Esci"};
+		int scelta = JOptionPane.showOptionDialog(null, panel, "Numero di tweet", 1, 0, icon, options, options[0]);
+		if(scelta==0)
+			mainMenu();
+		else
+			System.exit(-1);
+		
+	}
 		
 	}
 

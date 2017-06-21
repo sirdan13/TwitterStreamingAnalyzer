@@ -3,6 +3,7 @@ package analysis;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -161,9 +162,11 @@ public class CassandraManager {
 		List<String> credenzialiCassandra = SparkConsumer.readCassandraCredentials("config/credenziali_cassandra.txt");
 		new CassandraManager(hosts, credenzialiCassandra.get(0), credenzialiCassandra.get(1));
 	//	ResultSet rs = getTweetsWithTime("prova", "2017-06-19 16:20:00.000", "2017-06-19 20:20:00.000");
-		ResultSet rs = getMentionsWithTime("politica", "2017-06-19 09:20:00.000", "2017-06-19 14:20:00.000");
-		for(Row r : rs)
-			System.out.println(r.getString("topic")+" "+r.getString("text")+" "+r.getInt("retweetcount"));
+	//	ResultSet rs = getTopwords("calcio");
+		System.out.println(getTweetCount("maturità2017"));
+		/*for(Row r : rs)
+			System.out.println(r.getString("topic")+" "+r.getString("text")+" "+r.getInt("frequence"));*/
+	//	System.out.println(a);
 		session.close();
 	}
 	
@@ -201,13 +204,13 @@ public class CassandraManager {
 		psGetHashtags = session.prepare("select * from hashtags where topic = ?");
 		bsGetHashtags = new BoundStatement(psGetHashtags);
 		
-		psGetHashtagsWithTime = session.prepare("select count(*) from hashtags where topic = ? and created_at> ? and created_at< ?");
+		psGetHashtagsWithTime = session.prepare("select * from hashtags where topic = ? and created_at> ? and created_at< ?");
 		bsGetHashtagsWithTime = new BoundStatement(psGetHashtagsWithTime);
 		
 		psGetTopwords = session.prepare("select * from topwords where topic = ?");
 		bsGetTopwords = new BoundStatement(psGetTopwords);
 		
-		psGetTopwordsWithTime = session.prepare("select count(*) from topwords where topic = ? and created_at> ? and created_at< ?");
+		psGetTopwordsWithTime = session.prepare("select * from topwords where topic = ? and created_at> ? and created_at< ?");
 		bsGetTopwordsWithTime = new BoundStatement(psGetTopwordsWithTime);
 		
 		psGetMentions = session.prepare("select * from mentions where topic = ?");
@@ -219,7 +222,7 @@ public class CassandraManager {
 		psGetSentiment = session.prepare("select * from sentiment where topic = ?");
 		bsGetSentiment = new BoundStatement(psGetSentiment);
 		
-		psGetSentimentWithTime = session.prepare("select count(*) from sentiment where topic = ? and created_at> ? and created_at< ?");
+		psGetSentimentWithTime = session.prepare("select * from sentiment where topic = ? and created_at> ? and created_at< ?");
 		bsGetSentimentWithTime = new BoundStatement(psGetSentimentWithTime);
 		
 	}
@@ -259,18 +262,21 @@ public static ResultSet getTweetsWithTime(String topic, String startTime, String
 	
 }
 
-public int getTweetCount(String topic){
-	ResultSet rs = session.execute(bsGetTweets.bind(topic));
+public static String getTweetCount(String topic){
+	ResultSet rs = session.execute(bsGetTweetCount.bind(topic));
+	long output = 0;
 	for(Row r : rs)
-		return r.getInt("count");
-	return -1;
+		output = r.getLong("count");
+	return Long.toString(output);
 }
 
-public int getTweetCountWithTime(String topic, String startTime, String endTime){
-	ResultSet rs = session.execute(bsGetTweets.bind(topic, startTime, endTime));
+public static String getTweetCountWithTime(String topic, String startTime, String endTime){
+	ResultSet rs = session.execute(bsGetTweetCountWithTime.bind(topic, startTime, endTime));
+	long output = 0;
 	for(Row r : rs)
-		return r.getInt("count");
-	return -1;
+		output = r.getLong("count");
+	return Long.toString(output);
+	
 }
 
 public static ResultSet getHashtags(String topic){
@@ -289,7 +295,7 @@ public static ResultSet getTopwords(String topic){
 	return rs;
 }
 
-public ResultSet getTopwordsWithTime(String topic, String startTime, String endTime){
+public static ResultSet getTopwordsWithTime(String topic, String startTime, String endTime){
 	ResultSet rs = session.execute(bsGetTopwordsWithTime.bind(topic, startTime, endTime));
 	return rs;
 	
@@ -308,7 +314,7 @@ public static ResultSet getMentionsWithTime(String topic, String startTime, Stri
 	
 }
 
-public ResultSet getSentiment(String topic){
+public static ResultSet getSentiment(String topic){
 	ResultSet rs = session.execute(bsGetSentiment.bind(topic));
 	return rs;
 }
@@ -322,10 +328,6 @@ public ResultSet getSentimentWithTime(String topic, String startTime, String end
 public static void getTopUserWithTimeManager(String topic, String startTime, String endTime) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException{
 	initCassandra();
 	ResultSet rs = getMentionsWithTime(topic, startTime, endTime);
-	if(rs.all().size()==0){
-		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
-		System.exit(-1);
-	}
 	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
 	for(Row r : rs)
 		tuplelist.add(new Tuple2<String, Integer>(r.getString("user"), r.getInt("frequence")));
@@ -350,10 +352,6 @@ static Function2<Integer, Integer, Integer> sumFunc = new Function2<Integer, Int
 public static void getTopUserManager(String topic) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException{
 	initCassandra();
 	ResultSet rs = getMentions(topic);
-	if(rs.all().size()==0){
-		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
-		System.exit(-1);
-	}
 	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
 	for(Row r : rs)
 		tuplelist.add(new Tuple2<String, Integer>(r.getString("user"), r.getInt("frequence")));
@@ -368,15 +366,10 @@ public static void getTopUserManager(String topic) throws ClassNotFoundException
 public static void getTweetsWithTimeManager(String topic, String startTime, String endTime) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException{
 	initCassandra();
 	ResultSet rs = getTweetsWithTime(topic, startTime, endTime);
-	if(rs.all().size()==0){
-		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
-		System.exit(-1);
-	}
 	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
 	for(Row r : rs)
 		tuplelist.add(new Tuple2<String, Integer>(r.getString("text")+":username"+r.getString("user_name"), r.getInt("likecount")+r.getInt("retweetcount")));
-	
-	JavaPairRDD<String, Integer> tweets = jsc.parallelizePairs(tuplelist).reduceByKey(sumFunc);
+	JavaPairRDD<String, Integer> tweets = jsc.parallelizePairs(tuplelist);
 	Tuple2<Integer, String> topTweet = tweets.mapToPair(x->x.swap()).sortByKey(false).take(1).get(0);
 	String user = topTweet._2.split(":username")[1]; String text = topTweet._2.split(":username")[0];
 	Graphics.topTweetWindow(text, user, topTweet._1);
@@ -386,23 +379,10 @@ public static void getTweetsWithTimeManager(String topic, String startTime, Stri
 public static void getTweetsManager(String topic) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException{
 	initCassandra();
 	ResultSet rs = getTweets(topic);
-	if(rs.all().size()==0){
-		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
-		System.exit(-1);
-	}
 	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
 	for(Row r : rs)
 		tuplelist.add(new Tuple2<String, Integer>(r.getString("text")+":username"+r.getString("user_name"), r.getInt("likecount")+r.getInt("retweetcount")));
 	JavaPairRDD<String, Integer> tweets = jsc.parallelizePairs(tuplelist);
-	
-	tweets.reduceByKey(new Function2<Integer, Integer, Integer>(){
-
-		private static final long serialVersionUID = 1L;
-
-		@Override
-		public Integer call(Integer x, Integer y) throws Exception {
-			return x+y;
-		} });
 	Tuple2<Integer, String> topTweet = tweets.mapToPair(x->x.swap()).sortByKey(false).take(1).get(0);
 	String user = topTweet._2.split(":username")[1]; String text = topTweet._2.split(":username")[0];
 	Graphics.topTweetWindow(text, user, topTweet._1);
@@ -411,11 +391,7 @@ public static void getTweetsManager(String topic) throws ClassNotFoundException,
 
 public static void getTopWordsManagerWithTime(String topic, String startTime, String endTime) throws ClassNotFoundException, InstantiationException, IllegalAccessException, TwitterException, IOException, UnsupportedLookAndFeelException {
 	initCassandra();
-	ResultSet rs = getMentionsWithTime(topic, startTime, endTime);
-	if(rs.all().size()==0){
-		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
-		System.exit(-1);
-	}
+	ResultSet rs = getTopwordsWithTime(topic, startTime, endTime);
 	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
 	for(Row r : rs)
 		tuplelist.add(new Tuple2<String, Integer>(r.getString("text"), r.getInt("frequence")));
@@ -433,16 +409,15 @@ public static void getTopWordsManagerWithTime(String topic, String startTime, St
 public static void getTopWordsManager(String topic) throws ClassNotFoundException, InstantiationException, IllegalAccessException, TwitterException, IOException, UnsupportedLookAndFeelException {
 	initCassandra();
 	ResultSet rs = getTopwords(topic);
-	if(rs.all().size()==0){
-		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
-		System.exit(-1);
-	}
 	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
 	for(Row r : rs)
 		tuplelist.add(new Tuple2<String, Integer>(r.getString("text"), r.getInt("frequence")));
+		
 	JavaPairRDD<String, Integer> topwords = jsc.parallelizePairs(tuplelist).reduceByKey(sumFunc);
+	System.out.println(tuplelist.size());
+	System.out.println(topwords.count());
 	List<Tuple2<Integer, String>> top10Words = topwords.mapToPair(x->x.swap()).sortByKey(false).take(10);
-	
+	System.out.println(top10Words.size());
 	Graphics.topwordsWindow(top10Words);
 }
 
@@ -451,10 +426,6 @@ public static void getHashtagsManagerWithTime(String topic, String startTime, St
 	initCassandra();
 	ResultSet rs = getHashtagsWithTime(topic, startTime, endTime);
 	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
-	if(rs.all().size()==0){
-		JOptionPane.showMessageDialog(null, "Nessun risultato per la query desiderata", "Avvertimento", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
-		System.exit(-1);
-	}
 	for(Row r : rs)
 		tuplelist.add(new Tuple2<String, Integer>(r.getString("text"), r.getInt("frequence")));
 	
@@ -468,10 +439,6 @@ public static void getHashtagsManager(String topic) throws ClassNotFoundExceptio
 	
 	initCassandra();
 	ResultSet rs = getHashtags(topic);
-	if(rs.all().size()==0){
-		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
-		System.exit(-1);
-	}
 	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
 	for(Row r : rs)
 		tuplelist.add(new Tuple2<String, Integer>(r.getString("text"), r.getInt("frequence")));
@@ -480,6 +447,39 @@ public static void getHashtagsManager(String topic) throws ClassNotFoundExceptio
 	List<Tuple2<Integer, String>> top10HT = topHT.mapToPair(x->x.swap()).sortByKey(false).take(10);
 	
 	Graphics.topHTWindow(top10HT);
+}
+
+public static void getTweetCountManagerWithTime(String topic, String startTime, String endTime) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException {
+
+	initCassandra();
+	Graphics.tweetCount(getTweetCountWithTime(topic, startTime, endTime));
+		
+}
+
+public static void getTweetCountManager(String topic) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException {
+	
+	initCassandra();
+	Graphics.tweetCount(getTweetCount(topic));
+	
+}
+
+public static void getSentimentManager(String topic) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException {
+	
+	initCassandra();
+	ResultSet rs = getSentiment(topic);
+	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
+	for(Row r : rs)
+		tuplelist.add(new Tuple2<String, Integer>(r.getString("text"), r.getInt("frequence")));
+	
+	JavaPairRDD<String, Integer> topHT = jsc.parallelizePairs(tuplelist).reduceByKey(sumFunc);
+	List<Tuple2<Integer, String>> top10HT = topHT.mapToPair(x->x.swap()).sortByKey(false).take(10);
+	
+	Graphics.topHTWindow(top10HT);
+}
+
+public static void getSentimentWithTimeManager(String topic, String startTime, String endTime) {
+	// TODO Auto-generated method stub
+	
 }
 
 }
