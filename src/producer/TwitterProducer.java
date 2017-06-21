@@ -192,41 +192,7 @@ public class TwitterProducer {
 
 }
 	
-	public static String convertDate(Date date){
-		String converted = date.toString();
-		String output;
-		output = ""+converted.charAt(converted.length()-4)+converted.charAt(converted.length()-3)+converted.charAt(converted.length()-2)+converted.charAt(converted.length()-1);
-		output += "-";
-		if(converted.substring(4, 7).equals("Jan"))
-			output+="01";
-		if(converted.substring(4, 7).equals("Feb"))
-			output+="02";
-		if(converted.substring(4, 7).equals("Mar"))
-			output+="03";
-		if(converted.substring(4, 7).equals("Apr"))
-			output+="04";
-		if(converted.substring(4, 7).equals("May"))
-			output+="05";
-		if(converted.substring(4, 7).equals("Jun"))
-			output+="06";
-		if(converted.substring(4, 7).equals("Jul"))
-			output+="07";
-		if(converted.substring(4, 7).equals("Aug"))
-			output+="08";
-		if(converted.substring(4, 7).equals("Sep"))
-			output+="09";
-		if(converted.substring(4, 7).equals("Oct"))
-			output+="10";
-		if(converted.substring(4, 7).equals("Nov"))
-			output+="11";
-		if(converted.substring(4, 7).equals("Dec"))
-			output+="12";
-		output+="-";
-		output+=converted.substring(8, 10);
-		output+=" ";
-		output+=converted.substring(11, 19);
-		return output;
-	}
+	
 	
 	private static FilterQuery importLanguagesInQuery(FilterQuery query, String[] lang) {
 		if(lang.length==0)
@@ -252,18 +218,6 @@ public class TwitterProducer {
 	}
 
 	
-	@SuppressWarnings("unused")
-	private static String[] readKeywords(String file) throws FileNotFoundException {
-		List<String> keywords = new ArrayList<String>();
-		Scanner sc = new Scanner(new File(file));
-		while(sc.hasNextLine()){
-			keywords.add(sc.nextLine());
-		}
-		sc.close();
-		return keywords.toArray(new String[keywords.size()]);
-		
-	}
-
 	public static String [] readTwitterAuth(String file) throws FileNotFoundException{
 		String [] output = new String[4];
 		Scanner sc = new Scanner(new File(file));

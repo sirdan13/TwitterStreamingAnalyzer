@@ -384,12 +384,11 @@ private static void setAllDictionaries() {
 	     
 	static Function2<Integer, Integer, Integer> sumFunc = new Function2<Integer, Integer, Integer>() {
 	
+		private static final long serialVersionUID = 1L;
 	
-	private static final long serialVersionUID = 1L;
-	
-	@Override public Integer call(Integer i1, Integer i2) throws Exception {
-	    return i1 + i2;
-	  }
+		@Override public Integer call(Integer i1, Integer i2) throws Exception {
+			return i1 + i2;
+		}
 	};
 	static FlatMapFunction<Tuple2<String, String>, String> wordFunc = new FlatMapFunction<Tuple2<String, String>, String>(){
 	 private static final long serialVersionUID = 1L;

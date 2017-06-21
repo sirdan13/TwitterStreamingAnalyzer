@@ -41,6 +41,8 @@ public class Graphics {
 	static Icon icon =  new ImageIcon("config/icon.png");
 	static String analisi = "";
 	static String menuTweetPopolare;
+	static String menuTopUser;
+	static String menuTopword;
 	
 	static SparkConf conf;
 	static String appName;
@@ -180,18 +182,37 @@ public class Graphics {
         descrizione.setSize(1300, 200); descrizione.setLocation(0, 75); descrizione.setFont(new Font("Verdana", Font.ITALIC, 18));
         immagine.setSize(80, 80); immagine.setLocation(0, 65);
         nome.setText(user.getName()); account.setText("@"+user.getScreenName()); titolo.setText("L'utente più citato:"); descrizione.setText(user.getDescription());
+        
+        JButton mainMenu = new JButton();
+		mainMenu.setText("Menù principale"); mainMenu.setSize(150, 35); mainMenu.setLocation(800, 65); mainMenu.setFont(new Font("Verdana", Font.BOLD, 10));
+		ActionListener listener = new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JButton source = (JButton) e.getSource();
+               	menuTopUser = source.getText();
+            }
+        };
+		mainMenu.addActionListener(listener);
         panel.add(descrizione); panel.add(immagine); panel.add(account); panel.add(nome); panel.add(titolo); panel.add(label_citazioni);
+        panel.add(mainMenu);
         
         Graphics.setLF("Windows");
 		UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
 		UIManager.put("Panel.background",new ColorUIResource(214,227,249));
 		Dimension size = UIManager.getDimension("OptionPane.minimumSize");
 		size.width = 1300;
-		size.height= 340;
+		size.height= 350;
 		UIManager.put("OptionPane.minimumSize", size);
 		panel.setForeground(new ColorUIResource(214,227,249));
 		panel.setBackground(new ColorUIResource(214,227,249));
-		JOptionPane.showMessageDialog(null, panel, "Twitter", 0, icon);
+		int azione = JOptionPane.showOptionDialog(null, panel, "Top User", 2, 0, icon, null, null);
+		if(azione==0){
+			if(menuTopUser.equals("Menù principale"))
+				mainMenu();
+			}
+		else
+			System.exit(-1);
+		
         
 	}
 	
@@ -422,6 +443,16 @@ public class Graphics {
 					System.exit(-1);
 		}
 		
+		if(oraInizio.getText().length()>0){
+			if(oraFine.getText().length()>0)
+				CassandraManager.getTopWordsManagerWithTime(topic.getText(), oraInizio.getText(), oraFine.getText());
+		}
+			
+		
+		else
+			CassandraManager.getTopWordsManager(topic.getText());
+		
+		
 	}
 
 	private static void topHashtagsAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException {
@@ -455,6 +486,15 @@ public class Graphics {
 				if(option==2)
 					System.exit(-1);
 		}
+		
+		if(oraInizio.getText().length()>0){
+			if(oraFine.getText().length()>0)
+				CassandraManager.getHashtagsManagerWithTime(topic.getText(), oraInizio.getText(), oraFine.getText());
+		}
+			
+		
+		else
+			CassandraManager.getHashtagsManager(topic.getText());
 		
 	}
 
@@ -500,7 +540,7 @@ public class Graphics {
 		JLabel titolo = new JLabel("Il tweet più popolare:"); JLabel testo = new JLabel(text); JLabel username = new JLabel("by @"+user); JLabel label_num_likes = new JLabel("Like + Retweet ricevuti:"); JLabel logoRetweet = new JLabel(new ImageIcon("config/retweet.png")); JLabel logoLike = new JLabel(new ImageIcon("config/heart.png")); JLabel num_likes = new JLabel(likeAndRetweet.toString());
 		titolo.setFont(new Font("Verdana", Font.BOLD, 35)); titolo.setSize(500, 100); titolo.setLocation(450, 0); titolo.setForeground(Color.RED);
 		testo.setFont(new Font("Verdana", Font.PLAIN, 20)); testo.setSize(1300, 80); testo.setLocation(0, 180);
-		username.setFont(new Font("Verdana", Font.ITALIC, 20)); username.setSize(150, 100); username.setLocation(0, 220);
+		username.setFont(new Font("Verdana", Font.ITALIC, 20)); username.setSize(300, 100); username.setLocation(0, 220);
 		label_num_likes.setFont(new Font("Verdana", Font.BOLD, 20)); label_num_likes.setSize(300, 100); label_num_likes.setLocation(160, 165);
 		num_likes.setFont(new Font("Verdana", Font.ITALIC, 20)); num_likes.setSize(130, 100); num_likes.setLocation(85, 118);
 		logoLike.setLocation(0, 150); logoRetweet.setLocation(40, 150); logoRetweet.setVisible(true); logoLike.setVisible(true);
@@ -511,7 +551,7 @@ public class Graphics {
 		UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
 		UIManager.put("Panel.background",new ColorUIResource(214,227,249));
 		Dimension size = UIManager.getDimension("OptionPane.minimumSize");
-		size.width = 1400;
+		size.width = 1600;
 		size.height= 500;
 		UIManager.put("OptionPane.minimumSize", size);
 		panel.setSize(700, 700);
@@ -531,20 +571,229 @@ public class Graphics {
         mainMenu.addActionListener(listener);
     //    panel.add(refresh);
         panel.add(mainMenu);
-		int result = JOptionPane.showOptionDialog(null, panel, "Tweet più popolare", 1, 0, icon, null, null);
+        String [] options = {"Menù principale", "Esci"};
+		int result = JOptionPane.showOptionDialog(null, panel, "Top words", 1, 0, icon, options, options[0]);
 		if(result==0){
 			if(menuTweetPopolare.equals("Menù principale"))
 				mainMenu();
-			else
-				if(menuTweetPopolare.equals("Ricarica"))
-					popularTweets();
-		}
+			}
 		else
 			System.exit(-1);
 		
-	
+	}
+
+	public static void topwordsWindow(List<Tuple2<Integer, String>> top10Words) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException {
+
+		//Creo il pannello che ospiterà le componenti grafiche (null ci permette di impostare la grafica di default, che modificheremo in seguito)
+		JPanel panel = new JPanel(null);
+		/*
+		 * Creo le label per le 10 parole
+		 */
+		JLabel top1 = new JLabel(top10Words.get(0)._2);
+		JLabel top2 = new JLabel(top10Words.get(1)._2);
+		JLabel top3 = new JLabel(top10Words.get(2)._2);
+		JLabel top4 = new JLabel(top10Words.get(3)._2);
+		JLabel top5 = new JLabel(top10Words.get(4)._2);
+		JLabel top6 = new JLabel(top10Words.get(5)._2);
+		JLabel top7 = new JLabel(top10Words.get(6)._2);
+		JLabel top8 = new JLabel(top10Words.get(7)._2);
+		JLabel top9 = new JLabel(top10Words.get(8)._2);
+		JLabel top10 = new JLabel(top10Words.get(9)._2);
+		
+		/*
+		 * Creo le label per l'indicazione accanto alle parole
+		 */
+		JLabel top1L = new JLabel("#1");
+		JLabel top2L = new JLabel("#2");
+		JLabel top3L = new JLabel("#3");
+		JLabel top4L = new JLabel("#4");
+		JLabel top5L = new JLabel("#5");
+		JLabel top6L = new JLabel("#6");
+		JLabel top7L = new JLabel("#7");
+		JLabel top8L = new JLabel("#8");
+		JLabel top9L = new JLabel("#9");
+		JLabel top10L = new JLabel("#10");
+		
+		/*
+		 * Creo la label per il titolo
+		 */
+		JLabel titolo = new JLabel("I 10 termini più citati");
+		
+		/*
+		 * Per ognuna, imposto la posizione, la grandezza, il font
+		 */
+		
+		top1L.setFont(new Font("Verdana", Font.ITALIC, 17)); top1L.setSize(40, 40); top1L.setLocation(75, 80);
+		top2L.setFont(new Font("Verdana", Font.ITALIC, 17)); top2L.setSize(40, 40); top2L.setLocation(75, 100);
+		top3L.setFont(new Font("Verdana", Font.ITALIC, 17)); top3L.setSize(40, 40); top3L.setLocation(75, 120);
+		top4L.setFont(new Font("Verdana", Font.ITALIC, 17)); top4L.setSize(40, 40); top4L.setLocation(75, 140);
+		top5L.setFont(new Font("Verdana", Font.ITALIC, 17)); top5L.setSize(40, 40); top5L.setLocation(75, 160);
+		top6L.setFont(new Font("Verdana", Font.ITALIC, 17)); top6L.setSize(40, 40); top6L.setLocation(75, 180);
+		top7L.setFont(new Font("Verdana", Font.ITALIC, 17)); top7L.setSize(40, 40); top7L.setLocation(75, 200);
+		top8L.setFont(new Font("Verdana", Font.ITALIC, 17)); top8L.setSize(40, 40); top8L.setLocation(75, 220);
+		top9L.setFont(new Font("Verdana", Font.ITALIC, 17)); top9L.setSize(40, 40); top9L.setLocation(75, 240);
+		top10L.setFont(new Font("Verdana", Font.ITALIC, 17)); top10L.setSize(40, 40); top10L.setLocation(75, 260);
+		
+		top1.setFont(new Font("Verdana", Font.BOLD, 17)); top1.setSize(200, 40); top1.setLocation(140, 80);
+		top2.setFont(new Font("Verdana", Font.BOLD, 17)); top2.setSize(200, 40); top2.setLocation(140, 100);
+		top3.setFont(new Font("Verdana", Font.BOLD, 17)); top3.setSize(200, 40); top3.setLocation(140, 120);
+		top4.setFont(new Font("Verdana", Font.BOLD, 17)); top4.setSize(200, 40); top4.setLocation(140, 140);
+		top5.setFont(new Font("Verdana", Font.BOLD, 17)); top5.setSize(200, 40); top5.setLocation(140, 160);
+		top6.setFont(new Font("Verdana", Font.BOLD, 17)); top6.setSize(200, 40); top6.setLocation(140, 180);
+		top7.setFont(new Font("Verdana", Font.BOLD, 17)); top7.setSize(200, 40); top7.setLocation(140, 200);
+		top8.setFont(new Font("Verdana", Font.BOLD, 17)); top8.setSize(200, 40); top8.setLocation(140, 220);
+		top9.setFont(new Font("Verdana", Font.BOLD, 17)); top9.setSize(200, 40); top9.setLocation(140, 240);
+		top10.setFont(new Font("Verdana", Font.BOLD, 17)); top10.setSize(200, 40); top10.setLocation(140, 260);
+		
+		titolo.setFont(new Font("Verdana", Font.BOLD, 20)); titolo.setSize(300, 50); titolo.setLocation(35, 0); titolo.setForeground(Color.RED);
+		
+		/*
+		 * Creo il pulsante "Menù principale"
+		 */
+		JButton mainMenu = new JButton();
+		mainMenu.setText("Menù principale"); mainMenu.setSize(150, 35); mainMenu.setLocation(250, 200); mainMenu.setFont(new Font("Verdana", Font.BOLD, 10));
+		ActionListener listener = new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JButton source = (JButton) e.getSource();
+               	menuTopUser = source.getText();
+            }
+        };
+        
+        mainMenu.addActionListener(listener);
+		panel.add(top1L); panel.add(top2L); panel.add(top3L); panel.add(top4L); panel.add(top5L); panel.add(top6L); panel.add(top7L); panel.add(top8L); panel.add(top9L); panel.add(top10L);
+		panel.add(top1); panel.add(top2); panel.add(top3); panel.add(top4); panel.add(top5); panel.add(top6); panel.add(top7); panel.add(top8); panel.add(top9); panel.add(top10);
+		panel.add(titolo);// panel.add(mainMenu);
+		
+		/*
+		 * Imposto alcune configurazioni grafiche (come le dimensioni ed il colore della finestra di output)
+		 */
+		
+		Graphics.setLF("Windows");
+		UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
+		UIManager.put("Panel.background",new ColorUIResource(214,227,249));
+		Dimension size = UIManager.getDimension("OptionPane.minimumSize");
+		size.width = 470;
+		size.height= 400;
+		UIManager.put("OptionPane.minimumSize", size);
+		String [] options = {"Menù principale", "Esci"};
+		int result = JOptionPane.showOptionDialog(null, panel, "Top words", 1, 0, icon, options, options[0]);
+		if(result==0){
+			if(menuTopword.equals("Menù principale"))
+				mainMenu();
+			}
+		else
+			System.exit(-1);
+		
+		
+	}
+
+	public static void topHTWindow(List<Tuple2<Integer, String>> top10HT) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException {
+		//Creo il pannello che ospiterà le componenti grafiche (null ci permette di impostare la grafica di default, che modificheremo in seguito)
+				JPanel panel = new JPanel(null);
+				/*
+				 * Creo le label per le 10 parole
+				 */
+				JLabel top1 = new JLabel(top10HT.get(0)._2);
+				JLabel top2 = new JLabel(top10HT.get(1)._2);
+				JLabel top3 = new JLabel(top10HT.get(2)._2);
+				JLabel top4 = new JLabel(top10HT.get(3)._2);
+				JLabel top5 = new JLabel(top10HT.get(4)._2);
+				JLabel top6 = new JLabel(top10HT.get(5)._2);
+				JLabel top7 = new JLabel(top10HT.get(6)._2);
+				JLabel top8 = new JLabel(top10HT.get(7)._2);
+				JLabel top9 = new JLabel(top10HT.get(8)._2);
+				JLabel top10 = new JLabel(top10HT.get(9)._2);
+				
+				/*
+				 * Creo le label per l'indicazione accanto alle parole
+				 */
+				JLabel top1L = new JLabel("#1");
+				JLabel top2L = new JLabel("#2");
+				JLabel top3L = new JLabel("#3");
+				JLabel top4L = new JLabel("#4");
+				JLabel top5L = new JLabel("#5");
+				JLabel top6L = new JLabel("#6");
+				JLabel top7L = new JLabel("#7");
+				JLabel top8L = new JLabel("#8");
+				JLabel top9L = new JLabel("#9");
+				JLabel top10L = new JLabel("#10");
+				
+				/*
+				 * Creo la label per il titolo
+				 */
+				JLabel titolo = new JLabel("I 10 termini più citati");
+				
+				/*
+				 * Per ognuna, imposto la posizione, la grandezza, il font
+				 */
+				
+				top1L.setFont(new Font("Verdana", Font.ITALIC, 17)); top1L.setSize(40, 40); top1L.setLocation(75, 80);
+				top2L.setFont(new Font("Verdana", Font.ITALIC, 17)); top2L.setSize(40, 40); top2L.setLocation(75, 100);
+				top3L.setFont(new Font("Verdana", Font.ITALIC, 17)); top3L.setSize(40, 40); top3L.setLocation(75, 120);
+				top4L.setFont(new Font("Verdana", Font.ITALIC, 17)); top4L.setSize(40, 40); top4L.setLocation(75, 140);
+				top5L.setFont(new Font("Verdana", Font.ITALIC, 17)); top5L.setSize(40, 40); top5L.setLocation(75, 160);
+				top6L.setFont(new Font("Verdana", Font.ITALIC, 17)); top6L.setSize(40, 40); top6L.setLocation(75, 180);
+				top7L.setFont(new Font("Verdana", Font.ITALIC, 17)); top7L.setSize(40, 40); top7L.setLocation(75, 200);
+				top8L.setFont(new Font("Verdana", Font.ITALIC, 17)); top8L.setSize(40, 40); top8L.setLocation(75, 220);
+				top9L.setFont(new Font("Verdana", Font.ITALIC, 17)); top9L.setSize(40, 40); top9L.setLocation(75, 240);
+				top10L.setFont(new Font("Verdana", Font.ITALIC, 17)); top10L.setSize(40, 40); top10L.setLocation(75, 260);
+				
+				top1.setFont(new Font("Verdana", Font.BOLD, 17)); top1.setSize(200, 40); top1.setLocation(140, 80);
+				top2.setFont(new Font("Verdana", Font.BOLD, 17)); top2.setSize(200, 40); top2.setLocation(140, 100);
+				top3.setFont(new Font("Verdana", Font.BOLD, 17)); top3.setSize(200, 40); top3.setLocation(140, 120);
+				top4.setFont(new Font("Verdana", Font.BOLD, 17)); top4.setSize(200, 40); top4.setLocation(140, 140);
+				top5.setFont(new Font("Verdana", Font.BOLD, 17)); top5.setSize(200, 40); top5.setLocation(140, 160);
+				top6.setFont(new Font("Verdana", Font.BOLD, 17)); top6.setSize(200, 40); top6.setLocation(140, 180);
+				top7.setFont(new Font("Verdana", Font.BOLD, 17)); top7.setSize(200, 40); top7.setLocation(140, 200);
+				top8.setFont(new Font("Verdana", Font.BOLD, 17)); top8.setSize(200, 40); top8.setLocation(140, 220);
+				top9.setFont(new Font("Verdana", Font.BOLD, 17)); top9.setSize(200, 40); top9.setLocation(140, 240);
+				top10.setFont(new Font("Verdana", Font.BOLD, 17)); top10.setSize(200, 40); top10.setLocation(140, 260);
+				
+				titolo.setFont(new Font("Verdana", Font.BOLD, 20)); titolo.setSize(300, 50); titolo.setLocation(35, 0); titolo.setForeground(Color.RED);
+				
+				/*
+				 * Creo il pulsante "Menù principale"
+				 */
+				JButton mainMenu = new JButton();
+				mainMenu.setText("Menù principale"); mainMenu.setSize(150, 35); mainMenu.setLocation(250, 200); mainMenu.setFont(new Font("Verdana", Font.BOLD, 10));
+				ActionListener listener = new ActionListener() {
+		            @Override
+		            public void actionPerformed(ActionEvent e) {
+		                JButton source = (JButton) e.getSource();
+		               	menuTopUser = source.getText();
+		            }
+		        };
+		        
+		        mainMenu.addActionListener(listener);
+				panel.add(top1L); panel.add(top2L); panel.add(top3L); panel.add(top4L); panel.add(top5L); panel.add(top6L); panel.add(top7L); panel.add(top8L); panel.add(top9L); panel.add(top10L);
+				panel.add(top1); panel.add(top2); panel.add(top3); panel.add(top4); panel.add(top5); panel.add(top6); panel.add(top7); panel.add(top8); panel.add(top9); panel.add(top10);
+				panel.add(titolo);// panel.add(mainMenu);
+				
+				/*
+				 * Imposto alcune configurazioni grafiche (come le dimensioni ed il colore della finestra di output)
+				 */
+				
+				Graphics.setLF("Windows");
+				UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
+				UIManager.put("Panel.background",new ColorUIResource(214,227,249));
+				Dimension size = UIManager.getDimension("OptionPane.minimumSize");
+				size.width = 470;
+				size.height= 400;
+				UIManager.put("OptionPane.minimumSize", size);
+				String [] options = {"Menù principale", "Esci"};
+				int result = JOptionPane.showOptionDialog(null, panel, "Top words", 1, 0, icon, options, options[0]);
+				if(result==0){
+					if(menuTopword.equals("Menù principale"))
+						mainMenu();
+					}
+				else
+					System.exit(-1);
+				
+				
+			}
 		
 	}
 
 	
-}
+

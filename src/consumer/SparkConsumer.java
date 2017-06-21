@@ -14,6 +14,7 @@ import java.util.List;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 
@@ -33,6 +34,7 @@ public class SparkConsumer {
 	static Icon icon = new ImageIcon("config/icon.png");
 	static SparkConf conf;
 	static JavaStreamingContext jssc;
+	static JavaSparkContext jsc;
 	static String master = "";
 	static String appName = "";
 	static String zookeeper_server = "";
@@ -75,7 +77,7 @@ public class SparkConsumer {
 		 */
 		List<String> hosts = readCassandraHosts("config/cassandra_hosts.txt");
 		List<String> credenzialiCassandra = readCassandraCredentials("config/credenziali_cassandra.txt");
-		CassandraManager cm = new CassandraManager(hosts, credenzialiCassandra.get(0), credenzialiCassandra.get(1));
+		CassandraManager cm = new CassandraManager(hosts, credenzialiCassandra.get(0), credenzialiCassandra.get(1), jsc);
 		Analytics analytics = new Analytics(jssc, zookeeper_server, kafka_consumer_group, topics, cm);
 		analytics.analyzeTopic(topic);
 
@@ -100,8 +102,11 @@ public class SparkConsumer {
 	}
 
 	private static void init() {
-		conf = new SparkConf().setAppName(appName).setMaster(master);
-		jssc = new JavaStreamingContext(conf, new Duration(duration));
+		conf = new SparkConf().setAppName(appName).setMaster(master).set("spark.driver.allowMultipleContexts", "true");
+		System.out.println("conf settate");
+		jsc = new JavaSparkContext(conf);
+		jssc = new JavaStreamingContext(jsc, new Duration(duration));
+		System.out.println("jssc settato");
 		topics = new HashMap<String, Integer>();
 		topics.put(topic, Integer.parseInt(threads));
 		Logger.getLogger("org").setLevel(Level.ERROR);
@@ -109,7 +114,7 @@ public class SparkConsumer {
 	}
 
 	private static void loadProperties() throws FileNotFoundException{
-		Scanner sc = new Scanner(new File("config/spark_conf.txt"));
+		Scanner sc = new Scanner(new File("config/spark_streaming_conf.txt"));
 		int count = 0;
 		while(sc.hasNextLine()){
 			if(count==0)
