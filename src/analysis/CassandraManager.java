@@ -2,10 +2,13 @@ package analysis;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+import javax.swing.ImageIcon;
+import javax.swing.JOptionPane;
 import javax.swing.UnsupportedLookAndFeelException;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -27,6 +30,7 @@ import com.datastax.driver.core.Session;
 import consumer.SparkConsumer;
 import graphics.Graphics;
 import scala.Tuple2;
+import twitter4j.TwitterException;
 
 public class CassandraManager {
 	
@@ -83,13 +87,15 @@ public class CassandraManager {
 	static PreparedStatement psGetSentimentWithTime;
 	
 	
-	public CassandraManager(List<String> contactPoints, String user, String password){
+	public CassandraManager(List<String> contactPoints, String user, String password) throws FileNotFoundException{
 		builder = Cluster.builder().withCredentials(user, password);
 		for(String cp : contactPoints)
 			builder.addContactPoint(cp);
 		cluster=CassandraManager.builder.build();
 		session= cluster.connect("gbd2017_twitteranalysis");
 		prepareStatements();
+		loadSparkConf();
+		initSpark();
 	}
 	
 	public CassandraManager(String contactPoint, String user, String password) throws FileNotFoundException{
@@ -98,18 +104,19 @@ public class CassandraManager {
 		cluster=CassandraManager.builder.build();
 		session= cluster.connect(user);
 		prepareStatements();
-		loadProperties();
+		loadSparkConf();
 		initSpark();
 	}
 	
 	private static void initSpark() {
-		conf = new SparkConf().setAppName(appName).setMaster(master);
+		conf = new SparkConf().setAppName(appName).setMaster(master).set("spark.driver.allowMultipleContexts", "true");
 		jsc = new JavaSparkContext(conf);
+		System.out.println("JSC ready");
 		Logger.getLogger("org").setLevel(Level.ERROR);
 		Logger.getLogger("akka").setLevel(Level.ERROR);
 	}
 	
-	private static void loadProperties() throws FileNotFoundException{
+	private static void loadSparkConf() throws FileNotFoundException{
 		Scanner sc = new Scanner(new File("config/spark_conf.txt"));
 		while(sc.hasNextLine()){
 			String line = sc.nextLine();
@@ -129,12 +136,12 @@ public class CassandraManager {
 	}
 	
 	public static void main(String [] args) throws FileNotFoundException{
-//		SparkConsumer.readCassandraHosts("config/credenziali_cassandra.txt");
+
 		List<String> hosts = SparkConsumer.readCassandraHosts("config/cassandra_hosts.txt");
 		List<String> credenzialiCassandra = SparkConsumer.readCassandraCredentials("config/credenziali_cassandra.txt");
 		new CassandraManager(hosts, credenzialiCassandra.get(0), credenzialiCassandra.get(1));
-		ResultSet rs = getTweetsWithTime("prova", "2017-06-19 16:20:00.000", "2017-06-19 20:20:00.000");
-	//	rs.getColumnDefinitions();
+	//	ResultSet rs = getTweetsWithTime("prova", "2017-06-19 16:20:00.000", "2017-06-19 20:20:00.000");
+		ResultSet rs = getMentionsWithTime("politica", "2017-06-19 09:20:00.000", "2017-06-19 14:20:00.000");
 		for(Row r : rs)
 			System.out.println(r.getString("topic")+" "+r.getString("text")+" "+r.getInt("retweetcount"));
 		session.close();
@@ -186,7 +193,7 @@ public class CassandraManager {
 		psGetMentions = session.prepare("select * from mentions where topic = ?");
 		bsGetMentions = new BoundStatement(psGetMentions);
 		
-		psGetMentionsWithTime = session.prepare("select count(*) from mentions where topic = ? and created_at> ? and created_at< ?");
+		psGetMentionsWithTime = session.prepare("select * from mentions where topic = ? and created_at> ? and created_at< ?");
 		bsGetMentionsWithTime = new BoundStatement(psGetMentionsWithTime);
 		
 		psGetSentiment = session.prepare("select * from sentiment where topic = ?");
@@ -268,12 +275,12 @@ public ResultSet getTopwordsWithTime(String topic, String startTime, String endT
 	
 }
 
-public ResultSet getMentions(String topic){
+public static ResultSet getMentions(String topic){
 	ResultSet rs = session.execute(bsGetMentions.bind(topic));
 	return rs;
 }
 
-public ResultSet getMentionsWithTime(String topic, String startTime, String endTime){
+public static ResultSet getMentionsWithTime(String topic, String startTime, String endTime){
 	ResultSet rs = session.execute(bsGetMentionsWithTime.bind(topic, startTime, endTime));
 	return rs;
 	
@@ -290,16 +297,78 @@ public ResultSet getSentimentWithTime(String topic, String startTime, String end
 	
 }
 
+public static void getTopUserWithTimeManager(String topic, String startTime, String endTime) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException{
+	initCassandra();
+	ResultSet rs = getMentionsWithTime(topic, startTime, endTime);
+	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
+	for(Row r : rs)
+		tuplelist.add(new Tuple2<String, Integer>(r.getString("user"), r.getInt("frequence")));
+	if(tuplelist.size()==0){
+		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
+		System.exit(-1);
+	}
+	JavaPairRDD<String, Integer> topUsers = jsc.parallelizePairs(tuplelist).reduceByKey(sumFunc);
+	Tuple2<Integer, String> topUser = topUsers.mapToPair(x->x.swap()).sortByKey(false).take(1).get(0);
+	String user = topUser._2; Integer frequence = topUser._1;
+	Graphics.mostMentionedUser(user, frequence);
+}
 
-public static void getTweetsWithTimeManager(String topic, String startTime, String endTime) throws FileNotFoundException, ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException{
+static Function2<Integer, Integer, Integer> sumFunc = new Function2<Integer, Integer, Integer>() {
+	
+	
+	private static final long serialVersionUID = 1L;
+	
+	@Override public Integer call(Integer i1, Integer i2) throws Exception {
+	    return i1 + i2;
+	  }
+	};
+
+
+public static void getTopUserManager(String topic) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException{
+	initCassandra();
+	ResultSet rs = getMentions(topic);
+	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
+	for(Row r : rs)
+		tuplelist.add(new Tuple2<String, Integer>(r.getString("user"), r.getInt("frequence")));
+	if(tuplelist.size()==0){
+		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
+		System.exit(-1);
+	}
+	JavaPairRDD<String, Integer> topUsers = jsc.parallelizePairs(tuplelist).reduceByKey(sumFunc);
+	Tuple2<Integer, String> topUser = topUsers.mapToPair(x->x.swap()).sortByKey(false).take(1).get(0);
+	String user = topUser._2; Integer frequence = topUser._1;
+	Graphics.mostMentionedUser(user, frequence);
+}
+
+
+public static void getTweetsWithTimeManager(String topic, String startTime, String endTime) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException{
 	initCassandra();
 	ResultSet rs = getTweetsWithTime(topic, startTime, endTime);
-	loadProperties();
-	initSpark();
+	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
+	for(Row r : rs)
+		tuplelist.add(new Tuple2<String, Integer>(r.getString("text")+":username"+r.getString("user_name"), r.getInt("likecount")+r.getInt("retweetcount")));
+	if(tuplelist.size()==0){
+		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
+		System.exit(-1);
+	}
+	JavaPairRDD<String, Integer> tweets = jsc.parallelizePairs(tuplelist).reduceByKey(sumFunc);
+	Tuple2<Integer, String> topTweet = tweets.mapToPair(x->x.swap()).sortByKey(false).take(1).get(0);
+	String user = topTweet._2.split(":username")[1]; String text = topTweet._2.split(":username")[0];
+	Graphics.topTweetWindow(text, user, topTweet._1);
+}
+
+
+public static void getTweetsManager(String topic) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException{
+	initCassandra();
+	ResultSet rs = getTweets(topic);
 	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
 	for(Row r : rs)
 		tuplelist.add(new Tuple2<String, Integer>(r.getString("text")+":username"+r.getString("user_name"), r.getInt("likecount")+r.getInt("retweetcount")));
 	JavaPairRDD<String, Integer> tweets = jsc.parallelizePairs(tuplelist);
+	if(tuplelist.size()==0){
+		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
+		System.exit(-1);
+	}
 	tweets.reduceByKey(new Function2<Integer, Integer, Integer>(){
 
 		private static final long serialVersionUID = 1L;
@@ -311,6 +380,7 @@ public static void getTweetsWithTimeManager(String topic, String startTime, Stri
 	Tuple2<Integer, String> topTweet = tweets.mapToPair(x->x.swap()).sortByKey(false).take(1).get(0);
 	String user = topTweet._2.split(":username")[1]; String text = topTweet._2.split(":username")[0];
 	Graphics.topTweetWindow(text, user, topTweet._1);
+	
 }
 
 }
