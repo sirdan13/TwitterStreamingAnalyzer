@@ -40,9 +40,6 @@ public class Graphics {
 	
 	static Icon icon =  new ImageIcon("config/icon.png");
 	static String analisi = "";
-	static String menuTweetPopolare;
-	static String menuTopUser;
-	static String menuTopword;
 	
 	static SparkConf conf;
 	static String appName;
@@ -183,18 +180,7 @@ public class Graphics {
         immagine.setSize(80, 80); immagine.setLocation(0, 65);
         nome.setText(user.getName()); account.setText("@"+user.getScreenName()); titolo.setText("L'utente più citato:"); descrizione.setText(user.getDescription());
         
-        JButton mainMenu = new JButton();
-		mainMenu.setText("Menù principale"); mainMenu.setSize(150, 35); mainMenu.setLocation(800, 65); mainMenu.setFont(new Font("Verdana", Font.BOLD, 10));
-		ActionListener listener = new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                JButton source = (JButton) e.getSource();
-               	menuTopUser = source.getText();
-            }
-        };
-		mainMenu.addActionListener(listener);
         panel.add(descrizione); panel.add(immagine); panel.add(account); panel.add(nome); panel.add(titolo); panel.add(label_citazioni);
-        panel.add(mainMenu);
         
         Graphics.setLF("Windows");
 		UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
@@ -205,11 +191,10 @@ public class Graphics {
 		UIManager.put("OptionPane.minimumSize", size);
 		panel.setForeground(new ColorUIResource(214,227,249));
 		panel.setBackground(new ColorUIResource(214,227,249));
-		int azione = JOptionPane.showOptionDialog(null, panel, "Top User", 2, 0, icon, null, null);
-		if(azione==0){
-			if(menuTopUser.equals("Menù principale"))
-				mainMenu();
-			}
+		String [] options = {"Menù principale", "Esci"};
+		int azione = JOptionPane.showOptionDialog(null, panel, "Top User", 2, 0, icon, options, options[0]);
+		if(azione==0)
+			mainMenu();
 		else
 			System.exit(-1);
 		
@@ -555,28 +540,10 @@ public class Graphics {
 		size.height= 500;
 		UIManager.put("OptionPane.minimumSize", size);
 		panel.setSize(700, 700);
-	//	JButton refresh = new JButton(); 
-		JButton mainMenu = new JButton();
-	//	refresh.setText("Ricarica"); refresh.setSize(165, 65); refresh.setLocation(850, 310); refresh.setFont(new Font("Verdana", Font.PLAIN, 15));
-		mainMenu.setText("Menù principale"); mainMenu.setSize(165, 65); mainMenu.setLocation(1020, 310); mainMenu.setFont(new Font("Verdana", Font.PLAIN, 15));
-		
-		ActionListener listener = new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                JButton source = (JButton) e.getSource();
-                menuTweetPopolare = source.getText();
-            }
-        };
-    //    refresh.addActionListener(listener);
-        mainMenu.addActionListener(listener);
-    //    panel.add(refresh);
-        panel.add(mainMenu);
         String [] options = {"Menù principale", "Esci"};
 		int result = JOptionPane.showOptionDialog(null, panel, "Top words", 1, 0, icon, options, options[0]);
-		if(result==0){
-			if(menuTweetPopolare.equals("Menù principale"))
-				mainMenu();
-			}
+		if(result==0)
+			mainMenu();
 		else
 			System.exit(-1);
 		
@@ -647,20 +614,6 @@ public class Graphics {
 		
 		titolo.setFont(new Font("Verdana", Font.BOLD, 20)); titolo.setSize(300, 50); titolo.setLocation(35, 0); titolo.setForeground(Color.RED);
 		
-		/*
-		 * Creo il pulsante "Menù principale"
-		 */
-		JButton mainMenu = new JButton();
-		mainMenu.setText("Menù principale"); mainMenu.setSize(150, 35); mainMenu.setLocation(250, 200); mainMenu.setFont(new Font("Verdana", Font.BOLD, 10));
-		ActionListener listener = new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                JButton source = (JButton) e.getSource();
-               	menuTopUser = source.getText();
-            }
-        };
-        
-        mainMenu.addActionListener(listener);
 		panel.add(top1L); panel.add(top2L); panel.add(top3L); panel.add(top4L); panel.add(top5L); panel.add(top6L); panel.add(top7L); panel.add(top8L); panel.add(top9L); panel.add(top10L);
 		panel.add(top1); panel.add(top2); panel.add(top3); panel.add(top4); panel.add(top5); panel.add(top6); panel.add(top7); panel.add(top8); panel.add(top9); panel.add(top10);
 		panel.add(titolo);// panel.add(mainMenu);
@@ -678,10 +631,9 @@ public class Graphics {
 		UIManager.put("OptionPane.minimumSize", size);
 		String [] options = {"Menù principale", "Esci"};
 		int result = JOptionPane.showOptionDialog(null, panel, "Top words", 1, 0, icon, options, options[0]);
-		if(result==0){
-			if(menuTopword.equals("Menù principale"))
-				mainMenu();
-			}
+		if(result==0)
+			mainMenu();
+			
 		else
 			System.exit(-1);
 		
@@ -752,23 +704,10 @@ public class Graphics {
 				
 				titolo.setFont(new Font("Verdana", Font.BOLD, 20)); titolo.setSize(300, 50); titolo.setLocation(35, 0); titolo.setForeground(Color.RED);
 				
-				/*
-				 * Creo il pulsante "Menù principale"
-				 */
-				JButton mainMenu = new JButton();
-				mainMenu.setText("Menù principale"); mainMenu.setSize(150, 35); mainMenu.setLocation(250, 200); mainMenu.setFont(new Font("Verdana", Font.BOLD, 10));
-				ActionListener listener = new ActionListener() {
-		            @Override
-		            public void actionPerformed(ActionEvent e) {
-		                JButton source = (JButton) e.getSource();
-		               	menuTopUser = source.getText();
-		            }
-		        };
 		        
-		        mainMenu.addActionListener(listener);
 				panel.add(top1L); panel.add(top2L); panel.add(top3L); panel.add(top4L); panel.add(top5L); panel.add(top6L); panel.add(top7L); panel.add(top8L); panel.add(top9L); panel.add(top10L);
 				panel.add(top1); panel.add(top2); panel.add(top3); panel.add(top4); panel.add(top5); panel.add(top6); panel.add(top7); panel.add(top8); panel.add(top9); panel.add(top10);
-				panel.add(titolo);// panel.add(mainMenu);
+				panel.add(titolo);
 				
 				/*
 				 * Imposto alcune configurazioni grafiche (come le dimensioni ed il colore della finestra di output)
@@ -783,10 +722,8 @@ public class Graphics {
 				UIManager.put("OptionPane.minimumSize", size);
 				String [] options = {"Menù principale", "Esci"};
 				int result = JOptionPane.showOptionDialog(null, panel, "Top words", 1, 0, icon, options, options[0]);
-				if(result==0){
-					if(menuTopword.equals("Menù principale"))
-						mainMenu();
-					}
+				if(result==0)
+					mainMenu();
 				else
 					System.exit(-1);
 				

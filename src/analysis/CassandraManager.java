@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+
 import javax.swing.ImageIcon;
 import javax.swing.JOptionPane;
 import javax.swing.UnsupportedLookAndFeelException;
@@ -21,11 +22,11 @@ import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Cluster.Builder;
+import com.datastax.driver.core.Row;
 
 import utilities.DateManager;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 
 import consumer.SparkConsumer;
@@ -321,13 +322,14 @@ public ResultSet getSentimentWithTime(String topic, String startTime, String end
 public static void getTopUserWithTimeManager(String topic, String startTime, String endTime) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException{
 	initCassandra();
 	ResultSet rs = getMentionsWithTime(topic, startTime, endTime);
-	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
-	for(Row r : rs)
-		tuplelist.add(new Tuple2<String, Integer>(r.getString("user"), r.getInt("frequence")));
-	if(tuplelist.size()==0){
+	if(rs.all().size()==0){
 		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
 		System.exit(-1);
 	}
+	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
+	for(Row r : rs)
+		tuplelist.add(new Tuple2<String, Integer>(r.getString("user"), r.getInt("frequence")));
+
 	JavaPairRDD<String, Integer> topUsers = jsc.parallelizePairs(tuplelist).reduceByKey(sumFunc);
 	Tuple2<Integer, String> topUser = topUsers.mapToPair(x->x.swap()).sortByKey(false).take(1).get(0);
 	String user = topUser._2; Integer frequence = topUser._1;
@@ -348,13 +350,14 @@ static Function2<Integer, Integer, Integer> sumFunc = new Function2<Integer, Int
 public static void getTopUserManager(String topic) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException{
 	initCassandra();
 	ResultSet rs = getMentions(topic);
-	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
-	for(Row r : rs)
-		tuplelist.add(new Tuple2<String, Integer>(r.getString("user"), r.getInt("frequence")));
-	if(tuplelist.size()==0){
+	if(rs.all().size()==0){
 		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
 		System.exit(-1);
 	}
+	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
+	for(Row r : rs)
+		tuplelist.add(new Tuple2<String, Integer>(r.getString("user"), r.getInt("frequence")));
+	
 	JavaPairRDD<String, Integer> topUsers = jsc.parallelizePairs(tuplelist).reduceByKey(sumFunc);
 	Tuple2<Integer, String> topUser = topUsers.mapToPair(x->x.swap()).sortByKey(false).take(1).get(0);
 	String user = topUser._2; Integer frequence = topUser._1;
@@ -365,13 +368,14 @@ public static void getTopUserManager(String topic) throws ClassNotFoundException
 public static void getTweetsWithTimeManager(String topic, String startTime, String endTime) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException{
 	initCassandra();
 	ResultSet rs = getTweetsWithTime(topic, startTime, endTime);
-	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
-	for(Row r : rs)
-		tuplelist.add(new Tuple2<String, Integer>(r.getString("text")+":username"+r.getString("user_name"), r.getInt("likecount")+r.getInt("retweetcount")));
-	if(tuplelist.size()==0){
+	if(rs.all().size()==0){
 		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
 		System.exit(-1);
 	}
+	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
+	for(Row r : rs)
+		tuplelist.add(new Tuple2<String, Integer>(r.getString("text")+":username"+r.getString("user_name"), r.getInt("likecount")+r.getInt("retweetcount")));
+	
 	JavaPairRDD<String, Integer> tweets = jsc.parallelizePairs(tuplelist).reduceByKey(sumFunc);
 	Tuple2<Integer, String> topTweet = tweets.mapToPair(x->x.swap()).sortByKey(false).take(1).get(0);
 	String user = topTweet._2.split(":username")[1]; String text = topTweet._2.split(":username")[0];
@@ -382,14 +386,15 @@ public static void getTweetsWithTimeManager(String topic, String startTime, Stri
 public static void getTweetsManager(String topic) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException{
 	initCassandra();
 	ResultSet rs = getTweets(topic);
+	if(rs.all().size()==0){
+		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
+		System.exit(-1);
+	}
 	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
 	for(Row r : rs)
 		tuplelist.add(new Tuple2<String, Integer>(r.getString("text")+":username"+r.getString("user_name"), r.getInt("likecount")+r.getInt("retweetcount")));
 	JavaPairRDD<String, Integer> tweets = jsc.parallelizePairs(tuplelist);
-	if(tuplelist.size()==0){
-		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
-		System.exit(-1);
-	}
+	
 	tweets.reduceByKey(new Function2<Integer, Integer, Integer>(){
 
 		private static final long serialVersionUID = 1L;
@@ -407,16 +412,20 @@ public static void getTweetsManager(String topic) throws ClassNotFoundException,
 public static void getTopWordsManagerWithTime(String topic, String startTime, String endTime) throws ClassNotFoundException, InstantiationException, IllegalAccessException, TwitterException, IOException, UnsupportedLookAndFeelException {
 	initCassandra();
 	ResultSet rs = getMentionsWithTime(topic, startTime, endTime);
-	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
-	for(Row r : rs)
-		tuplelist.add(new Tuple2<String, Integer>(r.getString("text"), r.getInt("frequence")));
-	if(tuplelist.size()==0){
+	if(rs.all().size()==0){
 		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
 		System.exit(-1);
 	}
+	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
+	for(Row r : rs)
+		tuplelist.add(new Tuple2<String, Integer>(r.getString("text"), r.getInt("frequence")));
+	
 	JavaPairRDD<String, Integer> topwords = jsc.parallelizePairs(tuplelist).reduceByKey(sumFunc);
 	List<Tuple2<Integer, String>> top10Words = topwords.mapToPair(x->x.swap()).sortByKey(false).take(10);
-	
+	if(top10Words.size()==0){
+		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
+		System.exit(-1);
+	}
 	Graphics.topwordsWindow(top10Words);
 	
 }
@@ -424,13 +433,13 @@ public static void getTopWordsManagerWithTime(String topic, String startTime, St
 public static void getTopWordsManager(String topic) throws ClassNotFoundException, InstantiationException, IllegalAccessException, TwitterException, IOException, UnsupportedLookAndFeelException {
 	initCassandra();
 	ResultSet rs = getTopwords(topic);
-	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
-	for(Row r : rs)
-		tuplelist.add(new Tuple2<String, Integer>(r.getString("text"), r.getInt("frequence")));
-	if(tuplelist.size()==0){
+	if(rs.all().size()==0){
 		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
 		System.exit(-1);
 	}
+	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
+	for(Row r : rs)
+		tuplelist.add(new Tuple2<String, Integer>(r.getString("text"), r.getInt("frequence")));
 	JavaPairRDD<String, Integer> topwords = jsc.parallelizePairs(tuplelist).reduceByKey(sumFunc);
 	List<Tuple2<Integer, String>> top10Words = topwords.mapToPair(x->x.swap()).sortByKey(false).take(10);
 	
@@ -442,12 +451,13 @@ public static void getHashtagsManagerWithTime(String topic, String startTime, St
 	initCassandra();
 	ResultSet rs = getHashtagsWithTime(topic, startTime, endTime);
 	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
-	for(Row r : rs)
-		tuplelist.add(new Tuple2<String, Integer>(r.getString("text"), r.getInt("frequence")));
-	if(tuplelist.size()==0){
-		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
+	if(rs.all().size()==0){
+		JOptionPane.showMessageDialog(null, "Nessun risultato per la query desiderata", "Avvertimento", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
 		System.exit(-1);
 	}
+	for(Row r : rs)
+		tuplelist.add(new Tuple2<String, Integer>(r.getString("text"), r.getInt("frequence")));
+	
 	JavaPairRDD<String, Integer> topHT = jsc.parallelizePairs(tuplelist).reduceByKey(sumFunc);
 	List<Tuple2<Integer, String>> top10HT = topHT.mapToPair(x->x.swap()).sortByKey(false).take(10);
 	
@@ -455,16 +465,17 @@ public static void getHashtagsManagerWithTime(String topic, String startTime, St
 }
 
 public static void getHashtagsManager(String topic) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException {
-
+	
 	initCassandra();
 	ResultSet rs = getHashtags(topic);
-	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
-	for(Row r : rs)
-		tuplelist.add(new Tuple2<String, Integer>(r.getString("text"), r.getInt("frequence")));
-	if(tuplelist.size()==0){
+	if(rs.all().size()==0){
 		JOptionPane.showMessageDialog(null, null, "Nessun risultato per la query desiderata", JOptionPane.ERROR_MESSAGE, new ImageIcon("config/icon.png"));
 		System.exit(-1);
 	}
+	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
+	for(Row r : rs)
+		tuplelist.add(new Tuple2<String, Integer>(r.getString("text"), r.getInt("frequence")));
+	
 	JavaPairRDD<String, Integer> topHT = jsc.parallelizePairs(tuplelist).reduceByKey(sumFunc);
 	List<Tuple2<Integer, String>> top10HT = topHT.mapToPair(x->x.swap()).sortByKey(false).take(10);
 	
