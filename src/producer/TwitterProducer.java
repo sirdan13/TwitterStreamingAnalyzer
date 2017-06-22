@@ -38,6 +38,7 @@ public class TwitterProducer {
 	
 	public static void main(String[] args) throws Exception {
 		
+		//Creo la coda che conterrà i nostri Status in arrivo, settando una capacità di 1000 elementi
 		final LinkedBlockingQueue<Status> queue = new LinkedBlockingQueue<Status>(1000);
 
 		//Imposto la grafica (Look and Feel) secondo il tema di nome "Windows"
@@ -91,6 +92,7 @@ public class TwitterProducer {
 			}
 		};
 
+		//Creo la query che ci permetterà di estrarre dati da Twitter e ne imposto i parametri (lingue, keywords,...)
 		FilterQuery query = new FilterQuery();
 		
 		List<Object> params = Graphics.insertMultipleValues();
@@ -102,7 +104,6 @@ public class TwitterProducer {
 		
 		twitterStream.addListener(listener);
 		
-	//	query.language("it", "en");
 		twitterStream.filter(query);
 		
 		Properties props = new Properties();
@@ -120,8 +121,14 @@ public class TwitterProducer {
 		 * - value.serializer:		scelta del serializzatore che invia i dati V (valore) sotto forma di array di byte
 		 */
 		
-		props.put("metadata.broker.list", "localhost:2181");
-		props.put("bootstrap.servers", "localhost:9092");
+		List<String> kafkaBrokerList = readKafkaBrokers("config/kafka_broker_list.txt");
+		List<String> zookeeperServerList = readZKServerList("config/zookeeper_server_list.txt");
+		
+		for(String s : kafkaBrokerList)
+			props.put("metadata.broker.list", s);
+		
+		for(String s : zookeeperServerList)
+			props.put("bootstrap.servers", s);
 		
 		props.put("acks", "all");
 		props.put("retries", 0);
@@ -177,6 +184,7 @@ public class TwitterProducer {
 				if(status.getUserMentionEntities().length>0)
 					for(UserMentionEntity ue : status.getUserMentionEntities())
 						producer.send(new ProducerRecord<String, String>("mentions", Integer.toString(k++), ue.getScreenName()+";"+topic));
+				//Invia i dati al topic "sentiment"
 				producer.send(new ProducerRecord<String, String>("sentiment", status.getLang(), t.getProcessedText()+";"+topic));
 				
 				if(System.currentTimeMillis()-lastUpdate>=10000){
@@ -194,6 +202,26 @@ public class TwitterProducer {
 	
 	
 	
+	private static List<String> readKafkaBrokers(String file) throws FileNotFoundException {
+		Scanner sc = new Scanner(new File(file));
+		List<String> output = new ArrayList<String>();
+		while(sc.hasNextLine())
+			output.add(sc.nextLine());
+		sc.close();
+		return output;
+	}
+	
+	private static List<String> readZKServerList(String file) throws FileNotFoundException {
+		Scanner sc = new Scanner(new File(file));
+		List<String> output = new ArrayList<String>();
+		while(sc.hasNextLine())
+			output.add(sc.nextLine());
+		sc.close();
+		return output;
+	}
+
+
+
 	private static FilterQuery importLanguagesInQuery(FilterQuery query, String[] lang) {
 		if(lang.length==0)
 			return query.language();

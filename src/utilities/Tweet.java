@@ -1,15 +1,10 @@
 package utilities;
 import java.text.Normalizer;
 import java.text.Normalizer.Form;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
 import org.apache.spark.api.java.JavaRDD;
 import analysis.Analytics;
 import scala.Serializable;
-import twitter4j.HashtagEntity;
-import twitter4j.User;
 
 public class Tweet implements Serializable {
 	

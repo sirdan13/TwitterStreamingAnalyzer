@@ -1,6 +1,7 @@
 package analysis;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -12,6 +13,7 @@ import java.util.Set;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
+import javax.swing.UnsupportedLookAndFeelException;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -30,8 +32,9 @@ import org.apache.spark.streaming.kafka.KafkaUtils;
 
 import com.vdurmont.emoji.EmojiParser;
 
+import graphics.Graphics;
 import scala.Tuple2;
-import utilities.Tweet;
+import twitter4j.TwitterException;
 
 public class Analytics  {
 
@@ -90,6 +93,11 @@ public class Analytics  {
 	public static CassandraManager cm;
 	public static String topicSentiment;
 	public static String topicTopword;
+	
+	
+	public static void main(String [] args) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException{
+		Graphics.mainMenu();
+	}
 	
 	
 	public Analytics(JavaStreamingContext jssc, String zookeeper_server, String kafka_consumer_group, Map<String, Integer> topics) throws FileNotFoundException, SQLException{
@@ -758,16 +766,7 @@ public static VoidFunction<JavaPairRDD<String, Integer>> saveTopwordsToDB = new 
 	}
 	
 };
-/*
-private static void analyzeProcessedText() throws InterruptedException {
-	messages =  KafkaUtils.createStream(jssc, zookeeper_server, kafka_consumer_group, topics);
-	JavaPairDStream<String, Integer> words = messages.flatMap(wordFunc).mapToPair((x)->(new Tuple2<String, Integer>(x, 1))).reduceByKey(sumFunc);
-	sortedStream = words.mapToPair(x->x.swap()).transformToPair(sortFunc);
-	sortedStream.print();
-	jssc.start();
-	jssc.awaitTermination();
-}
-*/
+
 static VoidFunction<JavaPairRDD<Integer, String>> saveSentimentToDB = new VoidFunction<JavaPairRDD<Integer, String>>(){
 	
 	private static final long serialVersionUID = 1L;
@@ -829,8 +828,6 @@ public void analyzeTopic(String topic) throws InterruptedException, SQLException
 		analyzeHashtags();
 	if(topic=="mentions")
 		analyzeMentions();
-/*	if(topic=="original-text")
-		analyzeOriginalText();*/
 	if(topic=="top-words")
 		analyzeTopwords();
 	if(topic=="sentiment")
@@ -855,7 +852,6 @@ VoidFunction<JavaPairRDD<String, String>> saveTweetToDB = new VoidFunction<JavaP
 	@Override
 	public void call(JavaPairRDD<String, String> t) throws Exception {
 
-	//	List<Tuple2<String, String>> tweets = t.collect();
 		t.foreach(x->{
 			String [] scomposto = x._2.split("£&€");
 			if(scomposto.length>0)

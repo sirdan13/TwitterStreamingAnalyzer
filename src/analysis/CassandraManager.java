@@ -3,7 +3,6 @@ package analysis;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -96,11 +95,9 @@ public class CassandraManager {
 		for(String cp : contactPoints)
 			builder.addContactPoint(cp);
 		cluster = CassandraManager.builder.build();
-		session = cluster.connect("gbd2017_twitteranalysis");
+		session = cluster.connect(getKeyspace("config/keyspace.txt"));
 		prepareStatements();
 		CassandraManager.jsc=jsc;
-	//	loadSparkConf();
-	//	initSpark();
 	}
 	
 	public CassandraManager(String contactPoint, String user, String password) throws FileNotFoundException{
@@ -109,8 +106,6 @@ public class CassandraManager {
 		cluster=CassandraManager.builder.build();
 		session= cluster.connect(user);
 		prepareStatements();
-		//loadSparkConf();
-		//initSpark();
 	}
 	
 	public CassandraManager(List<String> hosts, String user, String password) throws FileNotFoundException {
@@ -119,13 +114,20 @@ public class CassandraManager {
 		for(String cp : hosts)
 			builder.addContactPoint(cp);
 		cluster=CassandraManager.builder.build();
-		session= cluster.connect("gbd2017_twitteranalysis");
+		session= cluster.connect(getKeyspace("config/keyspace.txt"));
 		prepareStatements();
 		if(CassandraManager.jsc==null){
 			loadSparkConf();
 			initSpark();
 		}
 		
+	}
+	
+	public static String getKeyspace(String file) throws FileNotFoundException{
+		Scanner sc = new Scanner(new File(file));
+		String keyspace = sc.nextLine();
+		sc.close();
+		return keyspace;
 	}
 
 	private static void initSpark() {
@@ -154,20 +156,6 @@ public class CassandraManager {
 		List<String> credenzialiCassandra = SparkConsumer.readCassandraCredentials("config/credenziali_cassandra.txt");
 		new CassandraManager(hosts, credenzialiCassandra.get(0), credenzialiCassandra.get(1));
 		
-	}
-	
-	public static void main(String [] args) throws FileNotFoundException{
-
-		List<String> hosts = SparkConsumer.readCassandraHosts("config/cassandra_hosts.txt");
-		List<String> credenzialiCassandra = SparkConsumer.readCassandraCredentials("config/credenziali_cassandra.txt");
-		new CassandraManager(hosts, credenzialiCassandra.get(0), credenzialiCassandra.get(1));
-	//	ResultSet rs = getTweetsWithTime("prova", "2017-06-19 16:20:00.000", "2017-06-19 20:20:00.000");
-	//	ResultSet rs = getTopwords("calcio");
-		System.out.println(getTweetCount("maturità2017"));
-		/*for(Row r : rs)
-			System.out.println(r.getString("topic")+" "+r.getString("text")+" "+r.getInt("frequence"));*/
-	//	System.out.println(a);
-		session.close();
 	}
 	
 	
@@ -355,7 +343,6 @@ public static void getTopUserManager(String topic) throws ClassNotFoundException
 	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
 	for(Row r : rs)
 		tuplelist.add(new Tuple2<String, Integer>(r.getString("user"), r.getInt("frequence")));
-	
 	JavaPairRDD<String, Integer> topUsers = jsc.parallelizePairs(tuplelist).reduceByKey(sumFunc);
 	Tuple2<Integer, String> topUser = topUsers.mapToPair(x->x.swap()).sortByKey(false).take(1).get(0);
 	String user = topUser._2; Integer frequence = topUser._1;
@@ -439,6 +426,7 @@ public static void getHashtagsManager(String topic) throws ClassNotFoundExceptio
 	
 	initCassandra();
 	ResultSet rs = getHashtags(topic);
+	
 	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
 	for(Row r : rs)
 		tuplelist.add(new Tuple2<String, Integer>(r.getString("text"), r.getInt("frequence")));
@@ -484,7 +472,7 @@ public static void getSentimentWithTimeManager(String topic, String startTime, S
 	long total = 0;
 	for(Row r : rs){
 		total = r.getLong("count");
-		like = r.getDouble("like")/total*100; sad = r.getDouble("sad")/total*100; angry = r.getDouble("angry")/total*100; hilarious = r.getDouble("hilarious")/total*100;
+		like = (r.getDouble("like")/total); sad = (r.getDouble("sad")/total); angry = (r.getDouble("angry")/total); hilarious = (r.getDouble("hilarious")/total);
 		
 	}
 		

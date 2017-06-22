@@ -72,8 +72,9 @@ public class SparkConsumer {
 		init();
 		
 		/*
-		 * Creo un oggetto di classe Analytics, passandogli i parametri di Spark
-		 * e chiamo il suo metodo analyzeTopic, per inviare al db i dati del topic desiderato
+		 * Importo gli indirizzi degli host di Cassandra, importo le credenziali di accesso alla connessione a Cassandra
+		 * Creo un oggetto di classe CassandraManager, per inizializzare al connessione
+		 * Infine creo un oggetto di classe Analytics per iniziare l'analisi del topic desiderato
 		 */
 		List<String> hosts = readCassandraHosts("config/cassandra_hosts.txt");
 		List<String> credenzialiCassandra = readCassandraCredentials("config/credenziali_cassandra.txt");
@@ -103,10 +104,8 @@ public class SparkConsumer {
 
 	private static void init() {
 		conf = new SparkConf().setAppName(appName).setMaster(master).set("spark.driver.allowMultipleContexts", "true");
-		System.out.println("conf settate");
 		jsc = new JavaSparkContext(conf);
 		jssc = new JavaStreamingContext(jsc, new Duration(duration));
-		System.out.println("jssc settato");
 		topics = new HashMap<String, Integer>();
 		topics.put(topic, Integer.parseInt(threads));
 		Logger.getLogger("org").setLevel(Level.ERROR);

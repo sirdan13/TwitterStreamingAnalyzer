@@ -699,7 +699,7 @@ public class Graphics {
 				/*
 				 * Creo la label per il titolo
 				 */
-				JLabel titolo = new JLabel("I 10 termini più citati");
+				JLabel titolo = new JLabel("I 10 hashtags più citati");
 				
 				/*
 				 * Per ognuna, imposto la posizione, la grandezza, il font
@@ -746,7 +746,7 @@ public class Graphics {
 				size.height= 400;
 				UIManager.put("OptionPane.minimumSize", size);
 				String [] options = {"Menù principale", "Esci"};
-				int result = JOptionPane.showOptionDialog(null, panel, "Top words", 1, 0, icon, options, options[0]);
+				int result = JOptionPane.showOptionDialog(null, panel, "Top hashtags", 1, 0, icon, options, options[0]);
 				if(result==0)
 					mainMenu();
 				else
