@@ -226,7 +226,7 @@ public void insertTweet(String text, String user_name, String created_at, String
 	
 	}
 
-public void insertSentiment(double like, double angry, double hilarious, double sad, int neutral, String topic) {
+public void insert(double like, double angry, double hilarious, double sad, int neutral, String topic) {
 	
 		session.execute(bsInsertSentiment.bind(DateManager.getDate(), like, angry, hilarious, sad, neutral, topic));
 	}
@@ -459,10 +459,10 @@ public static void getSentimentManager(String topic) throws ClassNotFoundExcepti
 	long total = 0;
 	for(Row r : rs){
 		total = r.getLong("count");
-		like = r.getDouble("like")/total*100; sad = r.getDouble("sad")/total*100; angry = r.getDouble("angry")/total*100; hilarious = r.getDouble("hilarious")/total*100;
+		like = r.getDouble("like")/total; sad = r.getDouble("sad")/total; angry = r.getDouble("angry")/total; hilarious = r.getDouble("hilarious")/total;
 	}
 		
-	Graphics.sentimentWindow(like, sad, angry, hilarious);
+	Graphics.sentimentWindow(Analytics.round(like, 2), Analytics.round(sad, 2), Analytics.round(angry, 2), Analytics.round(hilarious, 2));
 }
 
 public static void getSentimentWithTimeManager(String topic, String startTime, String endTime) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException {
