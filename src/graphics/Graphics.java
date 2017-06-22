@@ -778,6 +778,39 @@ public class Graphics {
 			System.exit(-1);
 		
 	}
+
+	public static void sentimentWindow(double like, double sad, double angry, double hilarious) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException {
+		JPanel panel = new JPanel(null);
+		JLabel emojiLike = new JLabel(new ImageIcon("config/like_emoji.png")); JLabel emojiAngry = new JLabel(new ImageIcon("config/angry_emoji.png")); JLabel emojiSad = new JLabel(new ImageIcon("config/sad_emoji.png")); JLabel emojiHilarious = new JLabel(new ImageIcon("config/hilarious_emoji.png"));
+		JLabel likeValue = new JLabel(Double.toString(like)+" %"); JLabel angryValue = new JLabel(Double.toString(angry)+" %"); JLabel sadValue = new JLabel(Double.toString(sad)+" %"); JLabel hilariousValue = new JLabel(Double.toString(hilarious)+" %");
+		
+		emojiLike.setLocation(30, 20); emojiAngry.setLocation(30, 120); emojiSad.setLocation(30, 220); emojiHilarious.setLocation(30, 320);
+		likeValue.setFont(new Font("Verdana", Font.BOLD, 15)); hilariousValue.setFont(new Font("Verdana", Font.BOLD, 15)); sadValue.setFont(new Font("Verdana", Font.BOLD, 15)); angryValue.setFont(new Font("Verdana", Font.BOLD, 15));
+		likeValue.setLocation(120, 35); angryValue.setLocation(120, 135); sadValue.setLocation(120, 235); hilariousValue.setLocation(120, 335);
+		
+		emojiLike.setSize(80, 80); emojiHilarious.setSize(80, 80); emojiSad.setSize(80, 80); emojiAngry.setSize(80, 80);
+		likeValue.setSize(400, 50); hilariousValue.setSize(400, 50); sadValue.setSize(400, 50); angryValue.setSize(400, 50);
+		
+		panel.add(hilariousValue); panel.add(sadValue); panel.add(angryValue); panel.add(likeValue);
+		panel.add(emojiHilarious); panel.add(emojiSad); panel.add(emojiAngry); panel.add(emojiLike);
+		
+		
+		Graphics.setLF("Windows");
+		UIManager.put("OptionPane.background", new ColorUIResource(214,227,249));
+		UIManager.put("Panel.background",new ColorUIResource(214,227,249));
+		Dimension size = UIManager.getDimension("OptionPane.minimumSize");
+		size.width = 600;
+		size.height= 500;
+		UIManager.put("OptionPane.minimumSize", size);
+	//	panel.setSize(800, 800);
+        String [] options = {"Menù principale", "Esci"};
+		int result = JOptionPane.showOptionDialog(null, panel, "Sentiment analysis", 1, 0, icon, options, options[0]);
+		if(result==0)
+			mainMenu();
+		else
+			System.exit(-1);
+		
+	}
 		
 	}
 

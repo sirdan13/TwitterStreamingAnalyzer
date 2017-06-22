@@ -219,10 +219,10 @@ public class CassandraManager {
 		psGetMentionsWithTime = session.prepare("select * from mentions where topic = ? and created_at> ? and created_at< ?");
 		bsGetMentionsWithTime = new BoundStatement(psGetMentionsWithTime);
 		
-		psGetSentiment = session.prepare("select * from sentiment where topic = ?");
+		psGetSentiment = session.prepare("select sum(like) as like, sum(sad) as sad, sum(angry) as angry, sum(hilarious) as hilarious, sum(neutral) as neutral, count(*) from sentiment where topic = ?");
 		bsGetSentiment = new BoundStatement(psGetSentiment);
 		
-		psGetSentimentWithTime = session.prepare("select * from sentiment where topic = ? and created_at> ? and created_at< ?");
+		psGetSentimentWithTime = session.prepare("select sum(like) as like, sum(sad) as sad, sum(angry) as angry, sum(hilarious) as hilarious, sum(neutral) as neutral, count(*) from sentiment where topic = ? and created_at> ? and created_at< ?");
 		bsGetSentimentWithTime = new BoundStatement(psGetSentimentWithTime);
 		
 	}
@@ -467,18 +467,28 @@ public static void getSentimentManager(String topic) throws ClassNotFoundExcepti
 	
 	initCassandra();
 	ResultSet rs = getSentiment(topic);
-	List<Tuple2<String, Integer>> tuplelist = new ArrayList<Tuple2<String, Integer>>();
-	for(Row r : rs)
-		tuplelist.add(new Tuple2<String, Integer>(r.getString("text"), r.getInt("frequence")));
-	
-	JavaPairRDD<String, Integer> topHT = jsc.parallelizePairs(tuplelist).reduceByKey(sumFunc);
-	List<Tuple2<Integer, String>> top10HT = topHT.mapToPair(x->x.swap()).sortByKey(false).take(10);
-	
-	Graphics.topHTWindow(top10HT);
+	double like = 0, sad = 0, angry = 0, hilarious = 0;
+	long total = 0;
+	for(Row r : rs){
+		total = r.getLong("count");
+		like = r.getDouble("like")/total*100; sad = r.getDouble("sad")/total*100; angry = r.getDouble("angry")/total*100; hilarious = r.getDouble("hilarious")/total*100;
+	}
+		
+	Graphics.sentimentWindow(like, sad, angry, hilarious);
 }
 
-public static void getSentimentWithTimeManager(String topic, String startTime, String endTime) {
-	// TODO Auto-generated method stub
+public static void getSentimentWithTimeManager(String topic, String startTime, String endTime) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException {
+	initCassandra();
+	ResultSet rs = getSentiment(topic);
+	double like = 0, sad = 0, angry = 0, hilarious = 0;
+	long total = 0;
+	for(Row r : rs){
+		total = r.getLong("count");
+		like = r.getDouble("like")/total*100; sad = r.getDouble("sad")/total*100; angry = r.getDouble("angry")/total*100; hilarious = r.getDouble("hilarious")/total*100;
+		
+	}
+		
+	Graphics.sentimentWindow(Analytics.round(like, 2), Analytics.round(sad, 2), Analytics.round(angry, 2), Analytics.round(hilarious, 2));
 	
 }
 
