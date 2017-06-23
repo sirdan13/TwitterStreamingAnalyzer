@@ -226,7 +226,7 @@ public void insertTweet(String text, String user_name, String created_at, String
 	
 	}
 
-public void insert(double like, double angry, double hilarious, double sad, int neutral, String topic) {
+public void insertSentiment(double like, double angry, double hilarious, double sad, int neutral, String topic) {
 	
 		session.execute(bsInsertSentiment.bind(DateManager.getDate(), like, angry, hilarious, sad, neutral, topic));
 	}

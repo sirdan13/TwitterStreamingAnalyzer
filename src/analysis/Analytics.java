@@ -789,14 +789,19 @@ static VoidFunction<JavaPairRDD<Integer, String>> saveSentimentToDB = new VoidFu
 				neutral=i._1;
 		}
 		
-		tot = like+angry+hilarious+sad;
-		like = like/tot*100;
-		angry = angry/tot*100;
-		hilarious = hilarious/tot*100;
-		sad = sad/tot*100;
-		if(like<=0 && angry<=0 && hilarious<=0 && sad<=0)
-			cm.insertSentiment(25, 25, 25, 25, neutral, topicSentiment);
-		cm.insertSentiment(round(like, 2), round(angry, 2), round(hilarious, 2), round(sad, 2), neutral, topicSentiment);
+		if(like+sad+angry+hilarious<=0){
+			cm.insertSentiment(25.0, 25.0, 25.0, 25.0, neutral, topicSentiment);
+		}
+			
+		else{
+			tot = like+angry+hilarious+sad;
+			like = like/tot*100;
+			angry = angry/tot*100;
+			hilarious = hilarious/tot*100;
+			sad = sad/tot*100;
+			cm.insertSentiment(round(like, 2), round(angry, 2), round(hilarious, 2), round(sad, 2), neutral, topicSentiment);
+		}
+		
 			
 	}
 	
