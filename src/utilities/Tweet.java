@@ -1,57 +1,34 @@
 package utilities;
 import java.text.Normalizer;
 import java.text.Normalizer.Form;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.Function2;
-
 import analysis.Analytics;
 import scala.Serializable;
-import twitter4j.HashtagEntity;
-import twitter4j.User;
 
 public class Tweet implements Serializable {
 	
-	private long tweet_id;
+	private static final long serialVersionUID = 1L;
+	
 	private String text;
-	private Date created_at;
-	private boolean isRetweet;
-	private transient HashtagEntity [] hashtags;
-	private List<String> hashtagsList;
-	private User user;
-	
 	private String processedText;
+	private boolean isRetweet;
 	
+	
+
 	public Tweet(){
 		
 	}
 	
-	public Tweet(long tweet_id, String text, Date created_at, boolean retweet, HashtagEntity[] hashtags, User user) {
-		super();
-		this.tweet_id = tweet_id;
-		this.text = text;
-		this.created_at = created_at;
-		this.isRetweet = retweet;
-		this.hashtags = hashtags;
-		this.user = user;
-		hashtagsList = new ArrayList<String>();
-		for(HashtagEntity h : hashtags)
-			hashtagsList.add(h.getText().toLowerCase());
+	public Tweet(String originalText,boolean isRetweet){
+		this.text = originalText;
 		processText();
 	}
 	
 	
 	public void processText(){
 		//Rimuove il termine "RT" che indica il retweet
-		if(isRetweet())
+		if(isRetweet() && text.startsWith("RT @"))
 			processedText = text.substring(3);
 		else
 			processedText=text;
@@ -63,12 +40,8 @@ public class Tweet implements Serializable {
 		processedText = removeAccents(processedText);
 		//Tutto minuscolo
 		processedText=processedText.toLowerCase();
-		//Rimuove caratteri non alfanumerici (# e @ escluso)
-		processedText=processedText.replaceAll("[^a-zA-Z0-9#@]", " ");
-		//Separa l'hashtag dalla parola precedente
-		processedText=processedText.replaceAll("#", " #");
-		//Separa la menzione dalla parola precedente
-		processedText=processedText.replaceAll("@", " @");
+		//Rimuove caratteri non alfanumerici
+		processedText=processedText.replaceAll("[^a-zA-Z0-9]", " ");
 		//Rimuove gli spazi extra
 		processedText=processedText.replaceAll("  *", " ");
 		//Rimuove gli spazi all'inizio del testo
@@ -98,16 +71,14 @@ public class Tweet implements Serializable {
 		            .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
 		}
 	
+	public String getProcessedText() {
+		return processedText;
+	}
+
+	public void setProcessedText(String processedText) {
+		this.processedText = processedText;
+	}
 	
-
-	public long getTweet_id() {
-		return tweet_id;
-	}
-
-	public void setTweet_id(long tweet_id) {
-		this.tweet_id = tweet_id;
-	}
-
 	public String getText() {
 		return text;
 	}
@@ -116,53 +87,13 @@ public class Tweet implements Serializable {
 		this.text = text;
 	}
 
-	public Date getCreated_at() {
-		return created_at;
-	}
-
-	public void setCreated_at(Date created_at) {
-		this.created_at = created_at;
-	}
-
 	public boolean isRetweet() {
 		return isRetweet;
 	}
 
-	public void setRetweet(boolean retweet) {
-		this.isRetweet = retweet;
+	public void setRetweet(boolean isRetweet) {
+		this.isRetweet = isRetweet;
 	}
 
-	public HashtagEntity[] getHashtags() {
-		return hashtags;
-	}
-
-	public void setHashtags(HashtagEntity[] hashtags) {
-		this.hashtags = hashtags;
-	}
-
-	public List<String> getHashtagsList() {
-		return hashtagsList;
-	}
-
-	public void setHashtagsList(List<String> hashtagsList) {
-		this.hashtagsList = hashtagsList;
-	}
-
-	public User getUser() {
-		return user;
-	}
-
-	public void setUser(User user) {
-		this.user = user;
-	}
-	
-	public String getProcessedText() {
-		return processedText;
-	}
-
-	public void setProcessedText(String processedText) {
-		this.processedText = processedText;
-	}
-
-	
+		
 }
