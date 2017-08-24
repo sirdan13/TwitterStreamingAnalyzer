@@ -2,7 +2,6 @@ package producer;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 import java.util.Scanner;
@@ -28,7 +27,6 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 
 import analysis.Analytics;
 import graphics.Graphics;
-import scala.Tuple2;
 
 
 

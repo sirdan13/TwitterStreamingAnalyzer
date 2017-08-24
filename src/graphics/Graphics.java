@@ -15,10 +15,13 @@ import javax.imageio.ImageIO;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.UIManager.LookAndFeelInfo;
@@ -223,6 +226,7 @@ public class Graphics {
             public void actionPerformed(ActionEvent e) {
                 JButton source = (JButton) e.getSource();
                	analisi = source.getText();
+               
             }
         };
         
@@ -317,6 +321,7 @@ public class Graphics {
 			CassandraManager.getTweetsManager(topic.getText());
 		
 	}
+	
 
 	private static void sentimentAnalysis() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException, TwitterException, IOException {
 		JTextField topic = new JTextField();
